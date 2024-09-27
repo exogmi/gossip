@@ -297,6 +297,8 @@ func (ph *ProtocolHandler) handleBanCommand(user *models.User, params []string) 
 		Type:    models.ServerMessage,
 	}, nil)
 
+	log.Printf("User %s banned %s from channel %s", user.Nickname, targetMask, channelName)
+
 	return []string{banMsg}, nil
 }
 

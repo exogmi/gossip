@@ -93,6 +93,7 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string, key
 	userMask := fmt.Sprintf("%s!%s@%s", user.Nickname, user.Username, user.Host)
 	for _, banMask := range channel.BanList {
 		if matchesMask(userMask, banMask) {
+			log.Printf("User %s attempted to join channel %s but is banned", user.Nickname, channelName)
 			return fmt.Errorf("cannot join channel: you're banned")
 		}
 	}
@@ -124,6 +125,8 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string, key
 		u.BroadcastToSessions(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, u.Nickname, channelName, strings.Join(userList, " ")))
 		u.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, u.Nickname, channelName))
 	}
+
+	log.Printf("User %s joined channel %s", user.Nickname, channelName)
 
 	return nil
 }
