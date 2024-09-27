@@ -17,6 +17,7 @@ type Channel struct {
 	InviteList  []string
 	Key         string
 	Operators   map[string]bool
+	Voices      map[string]bool
 }
 
 // ChannelModes represents the modes a channel can have
@@ -41,6 +42,7 @@ func NewChannel(name string) *Channel {
 		BanList:     make([]string, 0),
 		InviteList:  make([]string, 0),
 		Operators:   make(map[string]bool),
+		Voices:      make(map[string]bool),
 	}
 }
 
@@ -111,6 +113,8 @@ func (c *Channel) GetUserList() []string {
 	for nickname := range c.Users {
 		if c.Operators[nickname] {
 			userList = append(userList, "@"+nickname)
+		} else if c.Voices[nickname] {
+			userList = append(userList, "+"+nickname)
 		} else {
 			userList = append(userList, nickname)
 		}
