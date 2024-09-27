@@ -264,13 +264,18 @@ func (ph *ProtocolHandler) handleKickCommand(user *models.User, params []string)
 		return []string{fmt.Sprintf(":%s 441 %s %s %s :They aren't on that channel", ph.stateManager.ServerName, user.Nickname, targetNick, channelName)}, nil
 	}
 
-	ph.stateManager.ChannelManager.LeaveChannel(targetUser, channelName)
+	if err := ph.stateManager.ChannelManager.LeaveChannel(targetUser, channelName); err != nil {
+		return []string{fmt.Sprintf(":%s 491 %s %s :Could not kick user", ph.stateManager.ServerName, user.Nickname, targetNick)}, nil
+	}
 	kickMsg := fmt.Sprintf(":%s!%s@%s KICK %s %s :%s", user.Nickname, user.Username, user.Host, channelName, targetNick, reason)
 	ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
 		Sender:  user,
 		Content: kickMsg,
 		Type:    models.ServerMessage,
 	}, nil)
+
+	// Send the kick message to the kicked user
+	targetUser.BroadcastToSessions(kickMsg)
 
 	return []string{kickMsg}, nil
 }

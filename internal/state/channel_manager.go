@@ -136,6 +136,15 @@ func (cm *ChannelManager) LeaveChannel(user *models.User, channelName string) er
 
 	channel.RemoveUser(user.Nickname)
 	user.LeaveChannel(channelName)
+
+	// Remove user from operators list if they were an operator
+	delete(channel.Operators, user.Nickname)
+
+	// If the channel is empty after the user leaves, remove it
+	if len(channel.Users) == 0 {
+		delete(cm.channels, channelName)
+	}
+
 	return nil
 }
 
