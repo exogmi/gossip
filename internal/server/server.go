@@ -5,17 +5,20 @@ import (
 	"net"
 
 	"github.com/exogmi/gossip/config"
+	"github.com/exogmi/gossip/internal/state"
 )
 
 // Server represents the IRC server
 type Server struct {
-	config *config.Config
+	config       *config.Config
+	stateManager *state.StateManager
 }
 
 // New creates a new Server instance
-func New(cfg *config.Config) (*Server, error) {
+func New(cfg *config.Config, stateManager *state.StateManager) (*Server, error) {
 	return &Server{
-		config: cfg,
+		config:       cfg,
+		stateManager: stateManager,
 	}, nil
 }
 
@@ -42,5 +45,5 @@ func (s *Server) Run() error {
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	fmt.Printf("New connection from %s\n", conn.RemoteAddr())
-	// TODO: Implement actual connection handling
+	// TODO: Implement actual connection handling using s.stateManager
 }
