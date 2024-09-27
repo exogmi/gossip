@@ -20,6 +20,7 @@ test:
 
 integration-test:
 	$(PYTHON) -m unittest tests/integration/test_nickname_change.py
+	$(PYTHON) -m unittest tests/integration/test_channel_communication.py
 
 clean:
 	$(GOCLEAN)
