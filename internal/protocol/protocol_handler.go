@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/exogmi/gossip/config"
 	"github.com/exogmi/gossip/internal/models"
 	"github.com/exogmi/gossip/internal/state"
 )
@@ -60,9 +61,7 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, message *IRCMessage)
 
 func (ph *ProtocolHandler) handlePongCommand(user *models.User, params []string) ([]string, error) {
 	// PONG command doesn't require any action, just log it if needed
-	if ph.stateManager.Config.Verbosity >= config.Debug {
-		log.Printf("Received PONG from user %s", user.Nickname)
-	}
+	log.Printf("Received PONG from user %s", user.Nickname)
 	return nil, nil
 }
 
