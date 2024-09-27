@@ -2,9 +2,9 @@ package server
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/exogmi/gossip/config"
+	"github.com/exogmi/gossip/internal/network"
 	"github.com/exogmi/gossip/internal/state"
 )
 
@@ -12,38 +12,30 @@ import (
 type Server struct {
 	config       *config.Config
 	stateManager *state.StateManager
+	listener     *network.Listener
 }
 
 // New creates a new Server instance
 func New(cfg *config.Config, stateManager *state.StateManager) (*Server, error) {
+	listener, err := network.NewListener(cfg.Address(), stateManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create listener: %w", err)
+	}
+
 	return &Server{
 		config:       cfg,
 		stateManager: stateManager,
+		listener:     listener,
 	}, nil
 }
 
 // Run starts the server
 func (s *Server) Run() error {
-	listener, err := net.Listen("tcp", s.config.Address())
-	if err != nil {
-		return fmt.Errorf("failed to start listener: %w", err)
-	}
-	defer listener.Close()
-
 	fmt.Printf("Server listening on %s\n", s.config.Address())
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Printf("Error accepting connection: %v\n", err)
-			continue
-		}
-		go s.handleConnection(conn)
-	}
+	return s.listener.Start()
 }
 
-func (s *Server) handleConnection(conn net.Conn) {
-	defer conn.Close()
-	fmt.Printf("New connection from %s\n", conn.RemoteAddr())
-	// TODO: Implement actual connection handling using s.stateManager
+// Stop gracefully stops the server
+func (s *Server) Stop() {
+	s.listener.Stop()
 }
