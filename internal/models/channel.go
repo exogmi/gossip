@@ -31,6 +31,7 @@ type ChannelModes struct {
 func NewChannel(name string) *Channel {
 	return &Channel{
 		Name:        name,
+		Topic:       fmt.Sprintf("Welcome to %s!", name),
 		CreatedAt:   time.Now(),
 		Users:       make(map[string]*User),
 		Modes:       ChannelModes{},

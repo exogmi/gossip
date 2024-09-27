@@ -47,9 +47,75 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, message *IRCMessage)
 		return ph.handleQuitCommand(user, message.Params)
 	case "CAP":
 		return ph.handleCapCommand(user, message.Params)
+	case "PONG":
+		return ph.handlePongCommand(user, message.Params)
+	case "TOPIC":
+		return ph.handleTopicCommand(user, message.Params)
+	case "ISON":
+		return ph.handleIsonCommand(user, message.Params)
 	default:
 		return nil, fmt.Errorf("unknown command: %s", message.Command)
 	}
+}
+
+func (ph *ProtocolHandler) handlePongCommand(user *models.User, params []string) ([]string, error) {
+	// PONG command doesn't require any action, just log it if needed
+	if ph.stateManager.Config.Verbosity >= config.Debug {
+		log.Printf("Received PONG from user %s", user.Nickname)
+	}
+	return nil, nil
+}
+
+func (ph *ProtocolHandler) handleTopicCommand(user *models.User, params []string) ([]string, error) {
+	if len(params) < 1 {
+		return []string{fmt.Sprintf(":%s 461 %s TOPIC :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+	}
+
+	channelName := params[0]
+	channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
+	if err != nil {
+		return []string{fmt.Sprintf(":%s 403 %s %s :No such channel", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+	}
+
+	if len(params) == 1 {
+		// User is requesting the current topic
+		if channel.Topic == "" {
+			return []string{fmt.Sprintf(":%s 331 %s %s :No topic is set", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+		}
+		return []string{fmt.Sprintf(":%s 332 %s %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, channel.Topic)}, nil
+	}
+
+	// User is setting a new topic
+	newTopic := strings.Join(params[1:], " ")
+	if strings.HasPrefix(newTopic, ":") {
+		newTopic = newTopic[1:]
+	}
+	channel.SetTopic(newTopic)
+
+	// Broadcast the topic change to all users in the channel
+	topicChangeMsg := fmt.Sprintf(":%s!%s@%s TOPIC %s :%s", user.Nickname, user.Username, user.Host, channelName, newTopic)
+	ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+		Sender:  user,
+		Content: topicChangeMsg,
+		Type:    models.ServerMessage,
+	}, nil)
+
+	return []string{topicChangeMsg}, nil
+}
+
+func (ph *ProtocolHandler) handleIsonCommand(user *models.User, params []string) ([]string, error) {
+	if len(params) < 1 {
+		return []string{fmt.Sprintf(":%s 461 %s ISON :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+	}
+
+	onlineUsers := []string{}
+	for _, nickname := range params {
+		if ph.stateManager.UserManager.UserExists(nickname) {
+			onlineUsers = append(onlineUsers, nickname)
+		}
+	}
+
+	return []string{fmt.Sprintf(":%s 303 %s :%s", ph.stateManager.ServerName, user.Nickname, strings.Join(onlineUsers, " "))}, nil
 }
 
 func (ph *ProtocolHandler) GetUser() *models.User {
