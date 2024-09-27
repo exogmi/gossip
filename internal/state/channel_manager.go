@@ -114,6 +114,12 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string) err
 	user.BroadcastToSessions(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, user.Nickname, channelName, strings.Join(userList, " ")))
 	user.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, user.Nickname, channelName))
 
+	// Send updated user list to all users in the channel
+	for _, u := range channel.Users {
+		u.BroadcastToSessions(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, u.Nickname, channelName, strings.Join(userList, " ")))
+		u.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, u.Nickname, channelName))
+	}
+
 	return nil
 }
 
