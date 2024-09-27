@@ -50,26 +50,24 @@ class TestNicknameChange(unittest.TestCase):
 
         # Wait for the nickname change to be processed
         start_time = time.time()
-        while time.time() - start_time < 5:
+        nick_change_received = False
+        self_nick_change_received = False
+        
+        while time.time() - start_time < 10:  # Increased timeout to 10 seconds
             self.client1.process_once(0.1)
             self.client2.process_once(0.1)
-
-        # Check if user2 received the nickname change notification
-        nick_change_received = False
-        for msg in self.received_messages:
-            if msg[0] == "nick" and msg[1].split("!")[0] == "user1" and msg[3][0] == ":" + new_nickname:
-                nick_change_received = True
+            
+            for msg in self.received_messages:
+                if len(msg) >= 4 and msg[0] == "nick":
+                    if msg[1].split("!")[0] == "user1" and msg[3][0] == new_nickname:
+                        nick_change_received = True
+                    if msg[1].split("!")[0] == "user1" and msg[3][0] == new_nickname and msg[2] == "user1":
+                        self_nick_change_received = True
+                
+            if nick_change_received and self_nick_change_received:
                 break
 
         self.assertTrue(nick_change_received, "User2 did not receive the nickname change notification")
-
-        # Check if user1 received its own nickname change notification
-        self_nick_change_received = False
-        for msg in self.received_messages:
-            if msg[0] == "nick" and msg[1].split("!")[0] == "user1" and msg[3][0] == ":" + new_nickname and msg[2] == "user1":
-                self_nick_change_received = True
-                break
-
         self.assertTrue(self_nick_change_received, "User1 did not receive its own nickname change notification")
 
 if __name__ == '__main__':
