@@ -44,7 +44,7 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (s
 	case "QUIT":
 		return ph.handleQuitCommand(user, command.Params)
 	case "CAP":
-		return ph.handleCapCommand(user, command.Params)
+		return ph.handleCapCommand(nil, command.Params)
 	default:
 		return "", fmt.Errorf("unknown command: %s", command.Name)
 	}
@@ -211,7 +211,7 @@ func (ph *ProtocolHandler) handleCapCommand(user *models.User, params []string) 
 	}
 
 	subCommand := params[0]
-	log.Printf("Handling CAP command for user %s: %s", user.Nickname, subCommand)
+	log.Printf("Handling CAP command for user: %s", subCommand)
 
 	switch subCommand {
 	case "LS":
