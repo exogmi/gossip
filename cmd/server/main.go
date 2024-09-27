@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/exogmi/gossip/config"
@@ -14,6 +15,16 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Set up logging based on verbosity
+	switch cfg.Verbosity {
+	case config.Info:
+		log.SetFlags(log.Ldate | log.Ltime)
+	case config.Debug:
+		log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	case config.Trace:
+		log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Llongfile)
 	}
 
 	// Initialize state components
@@ -30,7 +41,7 @@ func main() {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	fmt.Println("Starting Gossip IRC server...")
+	log.Printf("Starting Gossip IRC server on %s with verbosity level %v", cfg.Address(), cfg.Verbosity)
 	if err := srv.Run(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}

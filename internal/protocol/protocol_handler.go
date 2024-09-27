@@ -2,182 +2,206 @@ package protocol
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/exogmi/gossip/internal/models"
 	"github.com/exogmi/gossip/internal/state"
 )
 
- type ProtocolHandler struct {
-     stateManager *state.StateManager
- }
+type ProtocolHandler struct {
+	stateManager *state.StateManager
+}
 
- func NewProtocolHandler(stateManager *state.StateManager) *ProtocolHandler {
-     return &ProtocolHandler{
-         stateManager: stateManager,
-     }
- }
+func NewProtocolHandler(stateManager *state.StateManager) *ProtocolHandler {
+	return &ProtocolHandler{
+		stateManager: stateManager,
+	}
+}
 
- func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (string, error) {
-     if ph == nil {
-         return "", fmt.Errorf("ProtocolHandler is nil")
-     }
-     if user == nil {
-         return "", fmt.Errorf("User is nil")
-     }
-     if command == nil {
-         return "", fmt.Errorf("Command is nil")
-     }
+func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (string, error) {
+	if ph == nil {
+		return "", fmt.Errorf("ProtocolHandler is nil")
+	}
+	if user == nil {
+		return "", fmt.Errorf("User is nil")
+	}
+	if command == nil {
+		return "", fmt.Errorf("Command is nil")
+	}
 
-     switch command.Name {
-     case "NICK":
-         return ph.handleNickCommand(user, command.Params)
-     case "USER":
-         return ph.handleUserCommand(user, command.Params)
-     case "JOIN":
-         return ph.handleJoinCommand(user, command.Params)
-     case "PART":
-         return ph.handlePartCommand(user, command.Params)
-     case "PRIVMSG":
-         return ph.handlePrivmsgCommand(user, command.Params)
-     case "QUIT":
-         return ph.handleQuitCommand(user, command.Params)
-     case "CAP":
-         return ph.handleCapCommand(user, command.Params)
-     default:
-         return "", fmt.Errorf("unknown command: %s", command.Name)
-     }
- }
+	log.Printf("Handling command: %s", command.Name)
 
- func (ph *ProtocolHandler) handleNickCommand(user *models.User, params []string) (string, error) {
-     if ph == nil || ph.stateManager == nil || ph.stateManager.UserManager == nil {
-         return "", fmt.Errorf("ProtocolHandler or its components are nil")
-     }
-     if user == nil {
-         return "", fmt.Errorf("User is nil")
-     }
-     if len(params) < 1 {
-         return "", fmt.Errorf("not enough parameters for NICK command")
-     }
-     newNick := params[0]
+	switch command.Name {
+	case "NICK":
+		return ph.handleNickCommand(user, command.Params)
+	case "USER":
+		return ph.handleUserCommand(user, command.Params)
+	case "JOIN":
+		return ph.handleJoinCommand(user, command.Params)
+	case "PART":
+		return ph.handlePartCommand(user, command.Params)
+	case "PRIVMSG":
+		return ph.handlePrivmsgCommand(user, command.Params)
+	case "QUIT":
+		return ph.handleQuitCommand(user, command.Params)
+	case "CAP":
+		return ph.handleCapCommand(user, command.Params)
+	default:
+		return "", fmt.Errorf("unknown command: %s", command.Name)
+	}
+}
 
-     if err := ph.stateManager.UserManager.ChangeNickname(user.Nickname, newNick); err != nil {
-         return "", fmt.Errorf("failed to change nickname: %w", err)
-     }
+func (ph *ProtocolHandler) handleNickCommand(user *models.User, params []string) (string, error) {
+	if ph == nil || ph.stateManager == nil || ph.stateManager.UserManager == nil {
+		return "", fmt.Errorf("ProtocolHandler or its components are nil")
+	}
+	if user == nil {
+		return "", fmt.Errorf("User is nil")
+	}
+	if len(params) < 1 {
+		return "", fmt.Errorf("not enough parameters for NICK command")
+	}
+	newNick := params[0]
 
-     user.Nickname = newNick
-     return fmt.Sprintf(":%s NICK %s", user.Nickname, newNick), nil
- }
+	log.Printf("Changing nickname for user %s to %s", user.Nickname, newNick)
 
- func (ph *ProtocolHandler) handleUserCommand(user *models.User, params []string) (string, error) {
-     if len(params) < 4 {
-         return "", fmt.Errorf("not enough parameters for USER command")
-     }
-     username, _, _, realname := params[0], params[1], params[2], params[3]
+	if err := ph.stateManager.UserManager.ChangeNickname(user.Nickname, newNick); err != nil {
+		log.Printf("Failed to change nickname: %v", err)
+		return "", fmt.Errorf("failed to change nickname: %w", err)
+	}
 
-     user.Username = username
-     user.Realname = realname
+	user.Nickname = newNick
+	return fmt.Sprintf(":%s NICK %s", user.Nickname, newNick), nil
+}
 
-     welcomeMsg := fmt.Sprintf(":%s 001 %s :Welcome to the Gossip IRC Network %s!%s@%s",
-         ph.stateManager.ServerName, user.Nickname, user.Nickname, user.Username, user.Host)
-     return welcomeMsg, nil
- }
+func (ph *ProtocolHandler) handleUserCommand(user *models.User, params []string) (string, error) {
+	if len(params) < 4 {
+		return "", fmt.Errorf("not enough parameters for USER command")
+	}
+	username, _, _, realname := params[0], params[1], params[2], params[3]
 
- func (ph *ProtocolHandler) handleJoinCommand(user *models.User, params []string) (string, error) {
-     if len(params) < 1 {
-         return "", fmt.Errorf("not enough parameters for JOIN command")
-     }
-     channelName := params[0]
+	log.Printf("Setting user information for %s: username=%s, realname=%s", user.Nickname, username, realname)
 
-     channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
-     if err != nil {
-         channel, err = ph.stateManager.ChannelManager.CreateChannel(channelName, user)
-         if err != nil {
-             return "", fmt.Errorf("failed to create channel: %w", err)
-         }
-     }
+	user.Username = username
+	user.Realname = realname
 
-     if err := ph.stateManager.ChannelManager.JoinChannel(user, channelName); err != nil {
-         return "", fmt.Errorf("failed to join channel: %w", err)
-     }
+	welcomeMsg := fmt.Sprintf(":%s 001 %s :Welcome to the Gossip IRC Network %s!%s@%s",
+		ph.stateManager.ServerName, user.Nickname, user.Nickname, user.Username, user.Host)
+	return welcomeMsg, nil
+}
 
-     joinMsg := fmt.Sprintf(":%s!%s@%s JOIN %s", user.Nickname, user.Username, user.Host, channelName)
-     topicMsg := fmt.Sprintf(":%s 332 %s %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, channel.Topic)
-     nameReplyMsg := fmt.Sprintf(":%s 353 %s = %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, strings.Join(channel.GetUserList(), " "))
-     endOfNamesMsg := fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", ph.stateManager.ServerName, user.Nickname, channelName)
+func (ph *ProtocolHandler) handleJoinCommand(user *models.User, params []string) (string, error) {
+	if len(params) < 1 {
+		return "", fmt.Errorf("not enough parameters for JOIN command")
+	}
+	channelName := params[0]
 
-     return fmt.Sprintf("%s\r\n%s\r\n%s\r\n%s", joinMsg, topicMsg, nameReplyMsg, endOfNamesMsg), nil
- }
+	log.Printf("User %s is joining channel %s", user.Nickname, channelName)
 
- func (ph *ProtocolHandler) handlePartCommand(user *models.User, params []string) (string, error) {
-     if len(params) < 1 {
-         return "", fmt.Errorf("not enough parameters for PART command")
-     }
-     channelName := params[0]
+	channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
+	if err != nil {
+		log.Printf("Channel %s not found, creating new channel", channelName)
+		channel, err = ph.stateManager.ChannelManager.CreateChannel(channelName, user)
+		if err != nil {
+			log.Printf("Failed to create channel %s: %v", channelName, err)
+			return "", fmt.Errorf("failed to create channel: %w", err)
+		}
+	}
 
-     if err := ph.stateManager.ChannelManager.LeaveChannel(user, channelName); err != nil {
-         return "", fmt.Errorf("failed to leave channel: %w", err)
-     }
+	if err := ph.stateManager.ChannelManager.JoinChannel(user, channelName); err != nil {
+		log.Printf("Failed to join channel %s: %v", channelName, err)
+		return "", fmt.Errorf("failed to join channel: %w", err)
+	}
 
-     partMsg := fmt.Sprintf(":%s!%s@%s PART %s", user.Nickname, user.Username, user.Host, channelName)
-     return partMsg, nil
- }
+	joinMsg := fmt.Sprintf(":%s!%s@%s JOIN %s", user.Nickname, user.Username, user.Host, channelName)
+	topicMsg := fmt.Sprintf(":%s 332 %s %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, channel.Topic)
+	nameReplyMsg := fmt.Sprintf(":%s 353 %s = %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, strings.Join(channel.GetUserList(), " "))
+	endOfNamesMsg := fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", ph.stateManager.ServerName, user.Nickname, channelName)
 
- func (ph *ProtocolHandler) handlePrivmsgCommand(user *models.User, params []string) (string, error) {
-     if len(params) < 2 {
-         return "", fmt.Errorf("not enough parameters for PRIVMSG command")
-     }
-     target, message := params[0], strings.Join(params[1:], " ")
+	return fmt.Sprintf("%s\r\n%s\r\n%s\r\n%s", joinMsg, topicMsg, nameReplyMsg, endOfNamesMsg), nil
+}
 
-     if strings.HasPrefix(target, "#") {
-         channel, err := ph.stateManager.ChannelManager.GetChannel(target)
-         if err != nil {
-             return "", fmt.Errorf("channel not found: %s", target)
-         }
-         msg := models.NewMessage(user, target, message, models.ChannelMessage)
-         ph.stateManager.MessageStore.StoreMessage(msg)
-         ph.stateManager.ChannelManager.BroadcastToChannel(channel, msg, user)
-     } else {
-         msg := models.NewMessage(user, target, message, models.PrivateMessage)
-         ph.stateManager.MessageStore.StoreMessage(msg)
-         // TODO: Implement message delivery to target user
-     }
+func (ph *ProtocolHandler) handlePartCommand(user *models.User, params []string) (string, error) {
+	if len(params) < 1 {
+		return "", fmt.Errorf("not enough parameters for PART command")
+	}
+	channelName := params[0]
 
-     return "", nil
- }
+	log.Printf("User %s is leaving channel %s", user.Nickname, channelName)
 
- func (ph *ProtocolHandler) handleQuitCommand(user *models.User, params []string) (string, error) {
-     quitMessage := "Quit"
-     if len(params) > 0 {
-         quitMessage = params[0]
-     }
+	if err := ph.stateManager.ChannelManager.LeaveChannel(user, channelName); err != nil {
+		log.Printf("Failed to leave channel %s: %v", channelName, err)
+		return "", fmt.Errorf("failed to leave channel: %w", err)
+	}
 
-     // Remove user from all channels
-     for _, channelName := range user.Channels {
-         ph.stateManager.ChannelManager.LeaveChannel(user, channelName)
-     }
+	partMsg := fmt.Sprintf(":%s!%s@%s PART %s", user.Nickname, user.Username, user.Host, channelName)
+	return partMsg, nil
+}
 
-     // Remove user from UserManager
-     ph.stateManager.UserManager.RemoveUser(user.Nickname)
+func (ph *ProtocolHandler) handlePrivmsgCommand(user *models.User, params []string) (string, error) {
+	if len(params) < 2 {
+		return "", fmt.Errorf("not enough parameters for PRIVMSG command")
+	}
+	target, message := params[0], strings.Join(params[1:], " ")
 
-     quitMsg := fmt.Sprintf(":%s!%s@%s QUIT :%s", user.Nickname, user.Username, user.Host, quitMessage)
-     return quitMsg, nil
- }
+	log.Printf("User %s is sending a message to %s: %s", user.Nickname, target, message)
 
- func (ph *ProtocolHandler) handleCapCommand(user *models.User, params []string) (string, error) {
-     if len(params) < 1 {
-         return "", fmt.Errorf("not enough parameters for CAP command")
-     }
+	if strings.HasPrefix(target, "#") {
+		channel, err := ph.stateManager.ChannelManager.GetChannel(target)
+		if err != nil {
+			log.Printf("Channel %s not found", target)
+			return "", fmt.Errorf("channel not found: %s", target)
+		}
+		msg := models.NewMessage(user, target, message, models.ChannelMessage)
+		ph.stateManager.MessageStore.StoreMessage(msg)
+		ph.stateManager.ChannelManager.BroadcastToChannel(channel, msg, user)
+	} else {
+		msg := models.NewMessage(user, target, message, models.PrivateMessage)
+		ph.stateManager.MessageStore.StoreMessage(msg)
+		// TODO: Implement message delivery to target user
+		log.Printf("Private message delivery not yet implemented")
+	}
 
-     subCommand := params[0]
-     switch subCommand {
-     case "LS":
-         return "CAP * LS :", nil
-     case "REQ":
-         return "CAP * ACK :", nil
-     case "END":
-         return "", nil
-     default:
-         return "", fmt.Errorf("unknown CAP subcommand: %s", subCommand)
-     }
- }
+	return "", nil
+}
+
+func (ph *ProtocolHandler) handleQuitCommand(user *models.User, params []string) (string, error) {
+	quitMessage := "Quit"
+	if len(params) > 0 {
+		quitMessage = params[0]
+	}
+
+	log.Printf("User %s is quitting: %s", user.Nickname, quitMessage)
+
+	// Remove user from all channels
+	for _, channelName := range user.Channels {
+		ph.stateManager.ChannelManager.LeaveChannel(user, channelName)
+	}
+
+	// Remove user from UserManager
+	ph.stateManager.UserManager.RemoveUser(user.Nickname)
+
+	quitMsg := fmt.Sprintf(":%s!%s@%s QUIT :%s", user.Nickname, user.Username, user.Host, quitMessage)
+	return quitMsg, nil
+}
+
+func (ph *ProtocolHandler) handleCapCommand(user *models.User, params []string) (string, error) {
+	if len(params) < 1 {
+		return "", fmt.Errorf("not enough parameters for CAP command")
+	}
+
+	subCommand := params[0]
+	log.Printf("Handling CAP command for user %s: %s", user.Nickname, subCommand)
+
+	switch subCommand {
+	case "LS":
+		return "CAP * LS :", nil
+	case "REQ":
+		return "CAP * ACK :", nil
+	case "END":
+		return "", nil
+	default:
+		return "", fmt.Errorf("unknown CAP subcommand: %s", subCommand)
+	}
+}

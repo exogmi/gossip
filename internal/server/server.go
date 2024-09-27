@@ -17,7 +17,7 @@ type Server struct {
 
 // New creates a new Server instance
 func New(cfg *config.Config, stateManager *state.StateManager) (*Server, error) {
-	listener, err := network.NewListener(cfg.Address(), stateManager)
+	listener, err := network.NewListener(cfg.Address(), stateManager, cfg.Verbosity)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener: %w", err)
 	}
