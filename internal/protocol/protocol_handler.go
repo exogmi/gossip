@@ -167,7 +167,12 @@ func (ph *ProtocolHandler) handlePrivmsgCommand(user *models.User, params []stri
 	if len(params) < 2 {
 		return nil, fmt.Errorf("not enough parameters for PRIVMSG command")
 	}
-	target, message := params[0], strings.Join(params[1:], " ")
+	target, message := params[0], params[1]
+
+	// Remove the leading colon from the message
+	if strings.HasPrefix(message, ":") {
+		message = message[1:]
+	}
 
 	log.Printf("User %s is sending a message to %s: %s", user.Nickname, target, message)
 
