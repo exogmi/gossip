@@ -22,15 +22,6 @@ func NewStateManager(userManager *UserManager, channelManager *ChannelManager, m
 	}
 }
 
-// NewStateManager creates a new StateManager instance
-func NewStateManager(userManager *UserManager, channelManager *ChannelManager, messageStore *MessageStore) *StateManager {
-	return &StateManager{
-		UserManager:    userManager,
-		ChannelManager: channelManager,
-		MessageStore:   messageStore,
-	}
-}
-
 // GetUser retrieves a user by nickname
 func (sm *StateManager) GetUser(nickname string) (*models.User, error) {
 	return sm.UserManager.GetUser(nickname)
