@@ -157,6 +157,9 @@ func (ph *ProtocolHandler) handleChannelUserMode(user *models.User, channel *mod
 		Type:    models.ServerMessage,
 	}, nil)
 
+	// Log mode change
+	log.Printf("Mode change in channel %s: %s sets %s on %s", channel.Name, user.Nickname, flag, targetUser)
+
 	// Update user list for all users in the channel
 	userList := channel.GetUserList()
 	for _, u := range channel.Users {
@@ -414,21 +417,28 @@ func (ph *ProtocolHandler) handleJoinCommand(user *models.User, params []string)
 		return nil, fmt.Errorf("not enough parameters for JOIN command")
 	}
 	channelName := params[0]
+	key := ""
+	if len(params) > 1 {
+		key = params[1]
+	}
 
 	log.Printf("User %s is joining channel %s", user.Nickname, channelName)
 
-	_, err := ph.stateManager.ChannelManager.GetChannel(channelName)
+	channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
 	if err != nil {
 		log.Printf("Channel %s not found, creating new channel", channelName)
-		_, err = ph.stateManager.ChannelManager.CreateChannel(channelName, user)
+		channel, err = ph.stateManager.ChannelManager.CreateChannel(channelName, user)
 		if err != nil {
 			log.Printf("Failed to create channel %s: %v", channelName, err)
 			return nil, fmt.Errorf("failed to create channel: %w", err)
 		}
 	}
 
-	if err := ph.stateManager.ChannelManager.JoinChannel(user, channelName); err != nil {
+	if err := ph.stateManager.ChannelManager.JoinChannel(user, channelName, key); err != nil {
 		log.Printf("Failed to join channel %s: %v", channelName, err)
+		if err.Error() == "cannot join channel: incorrect key" {
+			return []string{fmt.Sprintf(":%s 475 %s %s :Cannot join channel (+k) - bad key", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+		}
 		return nil, fmt.Errorf("failed to join channel: %w", err)
 	}
 

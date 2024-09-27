@@ -75,13 +75,18 @@ func (cm *ChannelManager) ListChannels() []*models.Channel {
 	return channels
 }
 
-func (cm *ChannelManager) JoinChannel(user *models.User, channelName string) error {
+func (cm *ChannelManager) JoinChannel(user *models.User, channelName string, key string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
 	channel, exists := cm.channels[channelName]
 	if !exists {
 		return ErrChannelNotFound
+	}
+
+	// Check if the channel has a key and if the provided key is correct
+	if channel.Key != "" && channel.Key != key {
+		return fmt.Errorf("cannot join channel: incorrect key")
 	}
 
 	// Check if the user is banned
