@@ -510,10 +510,10 @@ func (ph *ProtocolHandler) handleQuitCommand(user *models.User, params []string)
 
 	log.Printf("User %s is quitting: %s", user.Nickname, quitMessage)
 
-	// Remove user from all channels
-	for _, channelName := range user.Channels {
-		ph.stateManager.ChannelManager.LeaveChannel(user, channelName)
-	}
+	// Dont' remove user from all channels
+	//for _, channelName := range user.Channels {
+	//	ph.stateManager.ChannelManager.LeaveChannel(user, channelName)
+	// }
 
 	// Remove user from UserManager
 	ph.stateManager.UserManager.RemoveUser(user.Nickname)
