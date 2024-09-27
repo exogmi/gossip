@@ -73,16 +73,34 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 		}
 		ph.user = newUser
 		log.Printf("Created new user with nickname %s", newNick)
+		return []string{fmt.Sprintf(":%s NICK %s", newNick, newNick)}, nil
 	} else {
-		log.Printf("Changing nickname for user %s to %s", ph.user.Nickname, newNick)
-		if err := ph.stateManager.UserManager.ChangeNickname(ph.user.Nickname, newNick); err != nil {
+		oldNick := ph.user.Nickname
+		log.Printf("Changing nickname for user %s to %s", oldNick, newNick)
+		if err := ph.stateManager.UserManager.ChangeNickname(oldNick, newNick); err != nil {
 			log.Printf("Failed to change nickname: %v", err)
 			return nil, fmt.Errorf("failed to change nickname: %w", err)
 		}
 		ph.user.Nickname = newNick
-	}
 
-	return []string{fmt.Sprintf(":%s NICK %s", ph.user.Nickname, newNick)}, nil
+		// Notify all channels the user is in about the nickname change
+		nickChangeMsg := fmt.Sprintf(":%s!%s@%s NICK %s", oldNick, ph.user.Username, ph.user.Host, newNick)
+		for _, channelName := range ph.user.Channels {
+			channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
+			if err != nil {
+				log.Printf("Failed to get channel %s: %v", channelName, err)
+				continue
+			}
+			ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+				Sender:  ph.user,
+				Content: nickChangeMsg,
+				Type:    models.ChannelMessage,
+			}, nil)
+		}
+
+		// Send the nickname change message to the user who changed their nickname
+		return []string{nickChangeMsg}, nil
+	}
 }
 
 func (ph *ProtocolHandler) handleUserCommand(params []string) ([]string, error) {
