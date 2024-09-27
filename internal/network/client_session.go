@@ -29,7 +29,6 @@ type ClientSession struct {
 	wg              sync.WaitGroup
 	verbosity       config.VerbosityLevel
 	clientID        string
-	userInitialized bool
 }
 
 func NewClientSession(conn net.Conn, stateManager *state.StateManager, verbosity config.VerbosityLevel) *ClientSession {
@@ -138,9 +137,8 @@ func (cs *ClientSession) handleLoop() {
 			if response != "" {
 				cs.outgoing <- response
 			}
-			if !cs.userInitialized && (command.Name == "NICK" || command.Name == "USER") {
-				cs.user, _ = cs.stateManager.UserManager.GetUser(cs.user.Nickname)
-				cs.userInitialized = true
+			if cs.user == nil && (command.Name == "NICK" || command.Name == "USER") {
+				cs.user = cs.protocolHandler.GetUser()
 			}
 			if command.Name == "QUIT" {
 				cs.Stop()

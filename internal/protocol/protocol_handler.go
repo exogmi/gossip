@@ -11,6 +11,7 @@ import (
 
 type ProtocolHandler struct {
 	stateManager *state.StateManager
+	user         *models.User
 }
 
 func NewProtocolHandler(stateManager *state.StateManager) *ProtocolHandler {
@@ -23,9 +24,6 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (s
 	if ph == nil {
 		return "", fmt.Errorf("ProtocolHandler is nil")
 	}
-	if user == nil {
-		return "", fmt.Errorf("User is nil")
-	}
 	if command == nil {
 		return "", fmt.Errorf("Command is nil")
 	}
@@ -34,9 +32,9 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (s
 
 	switch command.Name {
 	case "NICK":
-		return ph.handleNickCommand(user, command.Params)
+		return ph.handleNickCommand(command.Params)
 	case "USER":
-		return ph.handleUserCommand(user, command.Params)
+		return ph.handleUserCommand(command.Params)
 	case "JOIN":
 		return ph.handleJoinCommand(user, command.Params)
 	case "PART":
@@ -46,13 +44,17 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (s
 	case "QUIT":
 		return ph.handleQuitCommand(user, command.Params)
 	case "CAP":
-		return ph.handleCapCommand(user, command.Params)
+		return ph.handleCapCommand(command.Params)
 	default:
 		return "", fmt.Errorf("unknown command: %s", command.Name)
 	}
 }
 
-func (ph *ProtocolHandler) handleNickCommand(user *models.User, params []string) (string, error) {
+func (ph *ProtocolHandler) GetUser() *models.User {
+	return ph.user
+}
+
+func (ph *ProtocolHandler) handleNickCommand(params []string) (string, error) {
 	if ph == nil || ph.stateManager == nil || ph.stateManager.UserManager == nil {
 		return "", fmt.Errorf("ProtocolHandler or its components are nil")
 	}
@@ -61,50 +63,50 @@ func (ph *ProtocolHandler) handleNickCommand(user *models.User, params []string)
 	}
 	newNick := params[0]
 
-	if user == nil {
+	if ph.user == nil {
 		// Create a new user if it doesn't exist
 		newUser := models.NewUser(newNick, "", "", "")
 		if err := ph.stateManager.UserManager.AddUser(newUser); err != nil {
 			log.Printf("Failed to add new user: %v", err)
 			return "", fmt.Errorf("failed to add new user: %w", err)
 		}
-		user = newUser
+		ph.user = newUser
 		log.Printf("Created new user with nickname %s", newNick)
 	} else {
-		log.Printf("Changing nickname for user %s to %s", user.Nickname, newNick)
-		if err := ph.stateManager.UserManager.ChangeNickname(user.Nickname, newNick); err != nil {
+		log.Printf("Changing nickname for user %s to %s", ph.user.Nickname, newNick)
+		if err := ph.stateManager.UserManager.ChangeNickname(ph.user.Nickname, newNick); err != nil {
 			log.Printf("Failed to change nickname: %v", err)
 			return "", fmt.Errorf("failed to change nickname: %w", err)
 		}
+		ph.user.Nickname = newNick
 	}
 
-	user.Nickname = newNick
-	return fmt.Sprintf(":%s NICK %s", user.Nickname, newNick), nil
+	return fmt.Sprintf(":%s NICK %s", ph.user.Nickname, newNick), nil
 }
 
-func (ph *ProtocolHandler) handleUserCommand(user *models.User, params []string) (string, error) {
+func (ph *ProtocolHandler) handleUserCommand(params []string) (string, error) {
 	if len(params) < 4 {
 		return "", fmt.Errorf("not enough parameters for USER command")
 	}
 	username, _, _, realname := params[0], params[1], params[2], params[3]
 
-	if user == nil {
+	if ph.user == nil {
 		return "", fmt.Errorf("user not initialized")
 	}
 
-	log.Printf("Setting user information for %s: username=%s, realname=%s", user.Nickname, username, realname)
+	log.Printf("Setting user information for %s: username=%s, realname=%s", ph.user.Nickname, username, realname)
 
-	user.Username = username
-	user.Realname = realname
-	user.Host = "localhost" // Set a default host
+	ph.user.Username = username
+	ph.user.Realname = realname
+	ph.user.Host = "localhost" // Set a default host
 
-	if err := ph.stateManager.UserManager.UpdateUser(user); err != nil {
+	if err := ph.stateManager.UserManager.UpdateUser(ph.user); err != nil {
 		log.Printf("Failed to update user: %v", err)
 		return "", fmt.Errorf("failed to update user: %w", err)
 	}
 
 	welcomeMsg := fmt.Sprintf(":%s 001 %s :Welcome to the Gossip IRC Network %s!%s@%s",
-		ph.stateManager.ServerName, user.Nickname, user.Nickname, user.Username, user.Host)
+		ph.stateManager.ServerName, ph.user.Nickname, ph.user.Nickname, ph.user.Username, ph.user.Host)
 	return welcomeMsg, nil
 }
 
