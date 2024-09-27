@@ -3,6 +3,7 @@ package protocol
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -60,9 +61,20 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 		return nil, fmt.Errorf("ProtocolHandler or its components are nil")
 	}
 	if len(params) < 1 {
-		return nil, fmt.Errorf("not enough parameters for NICK command")
+		return []string{fmt.Sprintf(":%s %d %s :No nickname given", ph.stateManager.ServerName, irc.ERR_NONICKNAMEGIVEN, ph.user.Nickname)}, nil
 	}
 	newNick := params[0]
+
+	// Check if the new nickname is valid
+	if !isValidNickname(newNick) {
+		return []string{fmt.Sprintf(":%s %d %s %s :Erroneous nickname", ph.stateManager.ServerName, irc.ERR_ERRONEUSNICKNAME, ph.user.Nickname, newNick)}, nil
+	}
+
+	// Check if the nickname is already in use
+	existingUser, _ := ph.stateManager.UserManager.GetUser(newNick)
+	if existingUser != nil && existingUser != ph.user {
+		return []string{fmt.Sprintf(":%s %d %s %s :Nickname is already in use", ph.stateManager.ServerName, irc.ERR_NICKNAMEINUSE, ph.user.Nickname, newNick)}, nil
+	}
 
 	if ph.user == nil {
 		// Create a new user if it doesn't exist
@@ -76,6 +88,10 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 		return []string{fmt.Sprintf(":%s NICK %s", newNick, newNick)}, nil
 	} else {
 		oldNick := ph.user.Nickname
+		if oldNick == newNick {
+			// No change in nickname
+			return nil, nil
+		}
 		log.Printf("Changing nickname for user %s to %s", oldNick, newNick)
 		if err := ph.stateManager.UserManager.ChangeNickname(oldNick, newNick); err != nil {
 			log.Printf("Failed to change nickname: %v", err)
@@ -101,6 +117,14 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 		// Send the nickname change message to the user who changed their nickname
 		return []string{nickChangeMsg}, nil
 	}
+}
+
+func isValidNickname(nickname string) bool {
+	// Implement nickname validation logic here
+	// For example, you can use a regular expression to check if the nickname is valid
+	// This is a simple example, you may want to adjust it based on your specific requirements
+	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9_-]{0,8}$", nickname)
+	return match
 }
 
 func (ph *ProtocolHandler) handleUserCommand(params []string) ([]string, error) {
