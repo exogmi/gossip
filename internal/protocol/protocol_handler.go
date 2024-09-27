@@ -53,8 +53,72 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, message *IRCMessage)
 		return ph.handleTopicCommand(user, message.Params)
 	case "ISON":
 		return ph.handleIsonCommand(user, message.Params)
+	case "MODE":
+		return ph.handleModeCommand(user, message.Params)
 	default:
 		return nil, fmt.Errorf("unknown command: %s", message.Command)
+	}
+}
+
+func (ph *ProtocolHandler) handleModeCommand(user *models.User, params []string) ([]string, error) {
+	if len(params) < 1 {
+		return []string{fmt.Sprintf(":%s 461 %s MODE :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+	}
+
+	targetName := params[0]
+	channel, err := ph.stateManager.GetChannel(targetName)
+
+	if err == nil { // Channel exists
+		if len(params) < 2 {
+			modes := "+"
+			if channel.Key != "" {
+				modes += "k"
+				if user.IsInChannel(channel.Name) {
+					modes += " " + channel.Key
+				}
+			}
+			return []string{fmt.Sprintf(":%s 324 %s %s %s", ph.stateManager.ServerName, user.Nickname, targetName, modes)}, nil
+		}
+
+		flag := params[1]
+		if flag == "+k" {
+			if len(params) < 3 {
+				return []string{fmt.Sprintf(":%s 461 %s MODE :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+			}
+			key := params[2]
+			if user.IsInChannel(channel.Name) {
+				channel.Key = key
+				msg := fmt.Sprintf(":%s!%s@%s MODE %s +k %s", user.Nickname, user.Username, user.Host, channel.Name, key)
+				ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+					Sender:  user,
+					Content: msg,
+					Type:    models.ServerMessage,
+				}, nil)
+				return []string{msg}, nil
+			}
+			return []string{fmt.Sprintf(":%s 442 %s :You're not on that channel", ph.stateManager.ServerName, targetName)}, nil
+		} else if flag == "-k" {
+			if user.IsInChannel(channel.Name) {
+				channel.Key = ""
+				msg := fmt.Sprintf(":%s!%s@%s MODE %s -k", user.Nickname, user.Username, user.Host, channel.Name)
+				ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+					Sender:  user,
+					Content: msg,
+					Type:    models.ServerMessage,
+				}, nil)
+				return []string{msg}, nil
+			}
+			return []string{fmt.Sprintf(":%s 442 %s :You're not on that channel", ph.stateManager.ServerName, targetName)}, nil
+		} else {
+			return []string{fmt.Sprintf(":%s 472 %s %s :Unknown MODE flag", ph.stateManager.ServerName, user.Nickname, flag)}, nil
+		}
+	} else if targetName == user.Nickname {
+		if len(params) == 1 {
+			return []string{fmt.Sprintf(":%s 221 %s +", ph.stateManager.ServerName, user.Nickname)}, nil
+		}
+		return []string{fmt.Sprintf(":%s 501 %s :Unknown MODE flag", ph.stateManager.ServerName, user.Nickname)}, nil
+	} else {
+		return []string{fmt.Sprintf(":%s 403 %s :No such channel", ph.stateManager.ServerName, targetName)}, nil
 	}
 }
 

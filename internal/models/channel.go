@@ -15,6 +15,7 @@ type Channel struct {
 	UserLimits  int
 	BanList     []string
 	InviteList  []string
+	Key         string
 }
 
 // ChannelModes represents the modes a channel can have
