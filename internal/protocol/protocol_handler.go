@@ -149,6 +149,39 @@ func (ph *ProtocolHandler) handleModeCommand(user *models.User, params []string)
 				log.Printf("[DEBUG] User %s not in channel %s", user.Nickname, channel.Name)
 			}
 			return []string{fmt.Sprintf(":%s 442 %s :You're not on that channel", ph.stateManager.ServerName, targetName)}, nil
+		} else if flag == "+o" || flag == "-o" {
+			if len(params) < 3 {
+				if ph.stateManager.Verbosity >= config.Debug {
+					log.Printf("[DEBUG] Not enough parameters for %s flag", flag)
+				}
+				return []string{fmt.Sprintf(":%s 461 %s MODE :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+			}
+			targetUser := params[2]
+			if user.IsInChannel(channel.Name) && channel.Operators[user.Nickname] {
+				if ph.stateManager.Verbosity >= config.Debug {
+					log.Printf("[DEBUG] Setting operator status for %s in channel %s to %v", targetUser, channel.Name, flag == "+o")
+				}
+				channel.Operators[targetUser] = (flag == "+o")
+				msg := fmt.Sprintf(":%s!%s@%s MODE %s %s %s", user.Nickname, user.Username, user.Host, channel.Name, flag, targetUser)
+				ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+					Sender:  user,
+					Content: msg,
+					Type:    models.ServerMessage,
+				}, nil)
+				
+				// Update user list for all users in the channel
+				userList := channel.GetUserList()
+				for _, u := range channel.Users {
+					u.BroadcastToSessions(fmt.Sprintf(":%s 353 %s = %s :%s", ph.stateManager.ServerName, u.Nickname, channel.Name, strings.Join(userList, " ")))
+					u.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", ph.stateManager.ServerName, u.Nickname, channel.Name))
+				}
+				
+				return []string{msg}, nil
+			}
+			if ph.stateManager.Verbosity >= config.Debug {
+				log.Printf("[DEBUG] User %s not an operator in channel %s", user.Nickname, channel.Name)
+			}
+			return []string{fmt.Sprintf(":%s 482 %s %s :You're not channel operator", ph.stateManager.ServerName, user.Nickname, channel.Name)}, nil
 		} else {
 			if ph.stateManager.Verbosity >= config.Debug {
 				log.Printf("[DEBUG] Unknown MODE flag: %s", flag)

@@ -108,11 +108,11 @@ func (c *Channel) String() string {
 // GetUserList returns a list of usernames in the channel, with @ for operators
 func (c *Channel) GetUserList() []string {
 	userList := make([]string, 0, len(c.Users))
-	for nickname, user := range c.Users {
+	for nickname := range c.Users {
 		if c.Operators[nickname] {
-			userList = append(userList, "@"+user.Nickname)
+			userList = append(userList, "@"+nickname)
 		} else {
-			userList = append(userList, user.Nickname)
+			userList = append(userList, nickname)
 		}
 	}
 	return userList
