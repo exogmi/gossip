@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -148,7 +149,7 @@ func TestListenerMaxConnections(t *testing.T) {
 	}
 
 	// Check the number of active connections in the listener
-	t.Logf("Active connections in listener: %d", atomic.LoadInt32(&listener.activeConns))
+	t.Logf("Active connections in listener: %d", atomic.LoadInt32(&listener.ActiveConns))
 
 	listener.Stop()
 

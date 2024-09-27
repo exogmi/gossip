@@ -137,13 +137,15 @@ func (cs *ClientSession) handleLoop() {
 			if cs.verbosity >= config.Debug {
 				log.Printf("Handling command for client %s: %s", cs.clientID, command.Name)
 			}
-			response, err := cs.protocolHandler.HandleCommand(cs.user, command)
+			responses, err := cs.protocolHandler.HandleCommand(cs.user, command)
 			if err != nil {
 				log.Printf("Error handling command for client %s: %v", cs.clientID, err)
 				continue
 			}
-			if response != "" {
-				cs.outgoing <- response
+			for _, response := range responses {
+				if response != "" {
+					cs.outgoing <- response
+				}
 			}
 			if cs.user == nil && (command.Name == "NICK" || command.Name == "USER") {
 				user := cs.protocolHandler.GetUser()

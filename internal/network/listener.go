@@ -33,7 +33,7 @@ func NewListener(address string, stateManager *state.StateManager, verbosity con
 		stopChan:       make(chan struct{}),
 		verbosity:      verbosity,
 		maxConnections: 1000, // Default max connections
-		activeConns:    0,
+		ActiveConns:    0,
 	}, nil
 }
 
