@@ -19,6 +19,16 @@ import (
  }
 
  func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (string, error) {
+     if ph == nil {
+         return "", fmt.Errorf("ProtocolHandler is nil")
+     }
+     if user == nil {
+         return "", fmt.Errorf("User is nil")
+     }
+     if command == nil {
+         return "", fmt.Errorf("Command is nil")
+     }
+
      switch command.Name {
      case "NICK":
          return ph.handleNickCommand(user, command.Params)
@@ -40,6 +50,12 @@ import (
  }
 
  func (ph *ProtocolHandler) handleNickCommand(user *models.User, params []string) (string, error) {
+     if ph == nil || ph.stateManager == nil || ph.stateManager.UserManager == nil {
+         return "", fmt.Errorf("ProtocolHandler or its components are nil")
+     }
+     if user == nil {
+         return "", fmt.Errorf("User is nil")
+     }
      if len(params) < 1 {
          return "", fmt.Errorf("not enough parameters for NICK command")
      }
