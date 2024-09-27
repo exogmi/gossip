@@ -125,19 +125,21 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 		return nil, fmt.Errorf("ProtocolHandler or its components are nil")
 	}
 	if len(params) < 1 {
-		return []string{fmt.Sprintf(":%s %d %s :No nickname given", ph.stateManager.ServerName, ERR_NONICKNAMEGIVEN, ph.user.Nickname)}, nil
+		return []string{fmt.Sprintf(":%s %d * :No nickname given", ph.stateManager.ServerName, ERR_NONICKNAMEGIVEN)}, nil
 	}
 	newNick := params[0]
 
 	// Check if the new nickname is valid
 	if !isValidNickname(newNick) {
-		return []string{fmt.Sprintf(":%s %d %s %s :Erroneous nickname", ph.stateManager.ServerName, ERR_ERRONEUSNICKNAME, ph.user.Nickname, newNick)}, nil
+		return []string{fmt.Sprintf(":%s %d * %s :Erroneous nickname", ph.stateManager.ServerName, ERR_ERRONEUSNICKNAME, newNick)}, nil
 	}
 
 	// Check if the nickname is already in use
 	existingUser, _ := ph.stateManager.UserManager.GetUser(newNick)
-	if existingUser != nil && existingUser != ph.user {
-		return []string{fmt.Sprintf(":%s %d %s %s :Nickname is already in use", ph.stateManager.ServerName, ERR_NICKNAMEINUSE, ph.user.Nickname, newNick)}, nil
+	if existingUser != nil {
+		if ph.user == nil || existingUser != ph.user {
+			return []string{fmt.Sprintf(":%s %d * %s :Nickname is already in use", ph.stateManager.ServerName, ERR_NICKNAMEINUSE, newNick)}, nil
+		}
 	}
 
 	if ph.user == nil {
