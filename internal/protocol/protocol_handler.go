@@ -122,10 +122,6 @@ import (
          ph.stateManager.MessageStore.StoreMessage(msg)
          ph.stateManager.ChannelManager.BroadcastToChannel(channel, msg, user)
      } else {
-         targetUser, err := ph.stateManager.UserManager.GetUser(target)
-         if err != nil {
-             return "", fmt.Errorf("user not found: %s", target)
-         }
          msg := models.NewMessage(user, target, message, models.PrivateMessage)
          ph.stateManager.MessageStore.StoreMessage(msg)
          // TODO: Implement message delivery to target user

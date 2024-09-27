@@ -114,6 +114,10 @@ func (cs *ClientSession) handleLoop() {
 			if response != "" {
 				cs.outgoing <- response
 			}
+			if command.Name == "QUIT" {
+				cs.Stop()
+				return
+			}
 		}
 	}
 }

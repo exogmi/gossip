@@ -9,6 +9,17 @@ type StateManager struct {
 	UserManager    *UserManager
 	ChannelManager *ChannelManager
 	MessageStore   *MessageStore
+	ServerName     string
+}
+
+// NewStateManager creates a new StateManager instance
+func NewStateManager(userManager *UserManager, channelManager *ChannelManager, messageStore *MessageStore, serverName string) *StateManager {
+	return &StateManager{
+		UserManager:    userManager,
+		ChannelManager: channelManager,
+		MessageStore:   messageStore,
+		ServerName:     serverName,
+	}
 }
 
 // NewStateManager creates a new StateManager instance

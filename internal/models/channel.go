@@ -100,3 +100,12 @@ func (c *Channel) IsInvited(nickname string) bool {
 func (c *Channel) String() string {
 	return fmt.Sprintf("Channel{Name: %s, Users: %d, Topic: %s}", c.Name, len(c.Users), c.Topic)
 }
+
+// GetUserList returns a list of usernames in the channel
+func (c *Channel) GetUserList() []string {
+	userList := make([]string, 0, len(c.Users))
+	for _, user := range c.Users {
+		userList = append(userList, user.Nickname)
+	}
+	return userList
+}
