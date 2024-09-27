@@ -81,6 +81,25 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string) err
 
 	channel.AddUser(user)
 	user.JoinChannel(channelName)
+
+	// Broadcast JOIN message to all users in the channel
+	joinMsg := fmt.Sprintf(":%s!%s@%s JOIN %s", user.Nickname, user.Username, user.Host, channelName)
+	for _, u := range channel.Users {
+		if u.ClientSession != nil {
+			u.ClientSession.SendMessage(joinMsg)
+		}
+	}
+
+	// Send channel topic to the joining user
+	if user.ClientSession != nil {
+		user.ClientSession.SendMessage(fmt.Sprintf(":%s 332 %s %s :%s", cm.serverName, user.Nickname, channelName, channel.Topic))
+		
+		// Send user list to the joining user
+		userList := channel.GetUserList()
+		user.ClientSession.SendMessage(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, user.Nickname, channelName, strings.Join(userList, " ")))
+		user.ClientSession.SendMessage(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, user.Nickname, channelName))
+	}
+
 	return nil
 }
 
@@ -104,10 +123,9 @@ func (cm *ChannelManager) BroadcastToChannel(channel *models.Channel, message *m
 
 	for _, user := range channel.Users {
 		if user != exclude {
-			// TODO: Implement message delivery to user
-			// This will depend on how you handle client connections
-			// For now, we'll just print the message
-			println("Delivering message to", user.Nickname, ":", message.Content)
+			if user.ClientSession != nil {
+				user.ClientSession.SendMessage(fmt.Sprintf(":%s!%s@%s PRIVMSG %s :%s", message.Sender.Nickname, message.Sender.Username, message.Sender.Host, channel.Name, message.Content))
+			}
 		}
 	}
 }

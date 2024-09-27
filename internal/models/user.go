@@ -7,15 +7,16 @@ import (
 
 // User represents an IRC user
 type User struct {
-	ID        string
-	Nickname  string
-	Username  string
-	Realname  string
-	Host      string
-	CreatedAt time.Time
-	LastSeen  time.Time
-	Channels  []string
-	Modes     UserModes
+	ID            string
+	Nickname      string
+	Username      string
+	Realname      string
+	Host          string
+	CreatedAt     time.Time
+	LastSeen      time.Time
+	Channels      []string
+	Modes         UserModes
+	ClientSession *ClientSession
 }
 
 // UserModes represents the modes a user can have

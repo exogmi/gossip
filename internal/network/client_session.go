@@ -31,6 +31,11 @@ type ClientSession struct {
 	clientID        string
 }
 
+func (cs *ClientSession) SetUser(user *models.User) {
+	cs.user = user
+	user.ClientSession = cs
+}
+
 func NewClientSession(conn net.Conn, stateManager *state.StateManager, verbosity config.VerbosityLevel) *ClientSession {
 	return &ClientSession{
 		conn:            conn,
@@ -138,7 +143,10 @@ func (cs *ClientSession) handleLoop() {
 				cs.outgoing <- response
 			}
 			if cs.user == nil && (command.Name == "NICK" || command.Name == "USER") {
-				cs.user = cs.protocolHandler.GetUser()
+				user := cs.protocolHandler.GetUser()
+				if user != nil {
+					cs.SetUser(user)
+				}
 			}
 			if command.Name == "QUIT" {
 				cs.Stop()

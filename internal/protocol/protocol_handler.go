@@ -133,12 +133,8 @@ func (ph *ProtocolHandler) handleJoinCommand(user *models.User, params []string)
 		return "", fmt.Errorf("failed to join channel: %w", err)
 	}
 
-	joinMsg := fmt.Sprintf(":%s!%s@%s JOIN %s", user.Nickname, user.Username, user.Host, channelName)
-	topicMsg := fmt.Sprintf(":%s 332 %s %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, channel.Topic)
-	nameReplyMsg := fmt.Sprintf(":%s 353 %s = %s :%s", ph.stateManager.ServerName, user.Nickname, channelName, strings.Join(channel.GetUserList(), " "))
-	endOfNamesMsg := fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", ph.stateManager.ServerName, user.Nickname, channelName)
-
-	return fmt.Sprintf("%s\r\n%s\r\n%s\r\n%s", joinMsg, topicMsg, nameReplyMsg, endOfNamesMsg), nil
+	// The JoinChannel function now handles sending all necessary messages
+	return "", nil
 }
 
 func (ph *ProtocolHandler) handlePartCommand(user *models.User, params []string) (string, error) {
