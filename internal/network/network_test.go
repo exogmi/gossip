@@ -214,9 +214,36 @@ func TestClientSessionReadWrite(t *testing.T) {
 	// So we'll wait a short time and then stop the session
 	time.Sleep(100 * time.Millisecond)
 
-	session.Stop()
+	// Use a channel to signal when Stop() is complete
+	done := make(chan struct{})
+	go func() {
+		session.Stop()
+		close(done)
+	}()
+
+	// Wait for Stop() to complete or timeout
+	select {
+	case <-done:
+		// Stop completed successfully
+	case <-time.After(5 * time.Second):
+		t.Error("Timeout waiting for session to stop")
+	}
+
 	client.Close()
-	wg.Wait()
+
+	// Wait for the session goroutine to finish with a timeout
+	c := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(c)
+	}()
+
+	select {
+	case <-c:
+		// Session goroutine finished
+	case <-time.After(5 * time.Second):
+		t.Error("Timeout waiting for session goroutine to finish")
+	}
 }
 
 func TestClientSessionClosure(t *testing.T) {
