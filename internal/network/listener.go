@@ -11,11 +11,13 @@ import (
 )
 
 type Listener struct {
-	tcpListener  net.Listener
-	stateManager *state.StateManager
-	stopChan     chan struct{}
-	wg           sync.WaitGroup
-	verbosity    config.VerbosityLevel
+	tcpListener    net.Listener
+	stateManager   *state.StateManager
+	stopChan       chan struct{}
+	wg             sync.WaitGroup
+	verbosity      config.VerbosityLevel
+	maxConnections int
+	activeConns    int32
 }
 
 func NewListener(address string, stateManager *state.StateManager, verbosity config.VerbosityLevel) (*Listener, error) {
@@ -25,10 +27,12 @@ func NewListener(address string, stateManager *state.StateManager, verbosity con
 	}
 
 	return &Listener{
-		tcpListener:  tcpListener,
-		stateManager: stateManager,
-		stopChan:     make(chan struct{}),
-		verbosity:    verbosity,
+		tcpListener:    tcpListener,
+		stateManager:   stateManager,
+		stopChan:       make(chan struct{}),
+		verbosity:      verbosity,
+		maxConnections: 1000, // Default max connections
+		activeConns:    0,
 	}, nil
 }
 
@@ -50,6 +54,14 @@ func (l *Listener) Start() error {
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
+			if atomic.LoadInt32(&l.activeConns) >= int32(l.maxConnections) {
+				log.Printf("Maximum connections reached, rejecting connection from %s", conn.RemoteAddr())
+				conn.Close()
+				continue
+			}
+
+			atomic.AddInt32(&l.activeConns, 1)
+
 			if l.verbosity >= config.Debug {
 				log.Printf("New connection accepted from %s", conn.RemoteAddr())
 			}
@@ -57,6 +69,7 @@ func (l *Listener) Start() error {
 			l.wg.Add(1)
 			go func() {
 				defer l.wg.Done()
+				defer atomic.AddInt32(&l.activeConns, -1)
 				session := NewClientSession(conn, l.stateManager, l.verbosity)
 				session.Start()
 			}()
