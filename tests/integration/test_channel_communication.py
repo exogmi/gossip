@@ -2,7 +2,6 @@ import unittest
 import subprocess
 import time
 import irc.client
-import threading
 
 class TestChannelCommunication(unittest.TestCase):
     @classmethod
@@ -18,30 +17,27 @@ class TestChannelCommunication(unittest.TestCase):
         cls.server_process.wait()
 
     def setUp(self):
-        self.client1 = irc.client.IRC()
-        self.client2 = irc.client.IRC()
+        self.client1 = irc.client.Reactor()
+        self.client2 = irc.client.Reactor()
+        self.received_messages = []
+        self.server1 = self.client1.server()
+        self.server2 = self.client2.server()
+        self.connection1 = self.server1.connect("localhost", 6667, "user1")
+        self.connection2 = self.server2.connect("localhost", 6667, "user2")
+        self.connection1.add_global_handler("pubmsg", self.on_pubmsg)
+        self.connection2.add_global_handler("pubmsg", self.on_pubmsg)
 
     def tearDown(self):
-        if hasattr(self, 'connection1'):
-            self.connection1.disconnect()
-        if hasattr(self, 'connection2'):
-            self.connection2.disconnect()
+        self.connection1.disconnect()
+        self.connection2.disconnect()
+
+    def on_pubmsg(self, connection, event):
+        self.received_messages.append(event.arguments[0])
 
     def test_channel_communication(self):
         channel = "#testchannel"
-        message = "Hello, World!"
-        received_messages = []
-
-        def on_pubmsg(connection, event):
-            received_messages.append(event.arguments[0])
-
-        # Connect client1
-        self.connection1 = self.client1.server().connect("localhost", 6667, "user1")
-        self.connection1.add_global_handler("pubmsg", on_pubmsg)
-
-        # Connect client2
-        self.connection2 = self.client2.server().connect("localhost", 6667, "user2")
-        self.connection2.add_global_handler("pubmsg", on_pubmsg)
+        message1 = "Hello, World!"
+        message2 = "This is another message."
 
         # Join the channel
         self.connection1.join(channel)
@@ -50,18 +46,20 @@ class TestChannelCommunication(unittest.TestCase):
         # Give some time for the joins to complete
         time.sleep(1)
 
-        # Send a message from client1
-        self.connection1.privmsg(channel, message)
+        # Send messages from both clients
+        self.connection1.privmsg(channel, message1)
+        self.connection2.privmsg(channel, message2)
 
-        # Wait for the message to be received
+        # Wait for the messages to be received
         start_time = time.time()
-        while len(received_messages) < 1 and time.time() - start_time < 5:
+        while len(self.received_messages) < 2 and time.time() - start_time < 5:
             self.client1.process_once(0.1)
             self.client2.process_once(0.1)
 
-        # Check if client2 received the message
-        self.assertEqual(len(received_messages), 1)
-        self.assertEqual(received_messages[0], message)
+        # Check if both messages were received
+        self.assertEqual(len(self.received_messages), 2)
+        self.assertIn(message1, self.received_messages)
+        self.assertIn(message2, self.received_messages)
 
 if __name__ == '__main__':
     unittest.main()
