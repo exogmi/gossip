@@ -106,10 +106,35 @@ func (cs *ClientSession) handleLoop() {
 				fmt.Printf("Error parsing message: %v\n", err)
 				continue
 			}
+			if cs.protocolHandler == nil {
+				fmt.Println("Error: ProtocolHandler is nil")
+				continue
+			}
+			if cs.user == nil {
+				fmt.Println("Error: User is nil")
+				continue
+			}
 			response, err := cs.protocolHandler.HandleCommand(cs.user, command)
 			if err != nil {
 				fmt.Printf("Error handling command: %v\n", err)
-				continue
+				if err.Error() == "User is nil" {
+					// Handle the case where the user is not yet initialized
+					// This might happen for the initial NICK and USER commands
+					if command.Name == "NICK" || command.Name == "USER" {
+						// Initialize the user if it's nil
+						cs.user = &models.User{}
+						response, err = cs.protocolHandler.HandleCommand(cs.user, command)
+						if err != nil {
+							fmt.Printf("Error handling initial command: %v\n", err)
+							continue
+						}
+					} else {
+						fmt.Println("Error: User is nil for non-initial command")
+						continue
+					}
+				} else {
+					continue
+				}
 			}
 			if response != "" {
 				cs.outgoing <- response
