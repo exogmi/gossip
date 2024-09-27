@@ -118,7 +118,7 @@ func (ph *ProtocolHandler) handleJoinCommand(user *models.User, params []string)
 
 	log.Printf("User %s is joining channel %s", user.Nickname, channelName)
 
-	channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
+	_, err := ph.stateManager.ChannelManager.GetChannel(channelName)
 	if err != nil {
 		log.Printf("Channel %s not found, creating new channel", channelName)
 		channel, err = ph.stateManager.ChannelManager.CreateChannel(channelName, user)
