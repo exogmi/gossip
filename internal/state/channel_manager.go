@@ -89,20 +89,16 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string) err
 	// Broadcast JOIN message to all users in the channel
 	joinMsg := fmt.Sprintf(":%s!%s@%s JOIN %s", user.Nickname, user.Username, user.Host, channelName)
 	for _, u := range channel.Users {
-		if u.ClientSession != nil {
-			u.ClientSession.SendMessage(joinMsg)
-		}
+		u.BroadcastToSessions(joinMsg)
 	}
 
 	// Send channel topic to the joining user
-	if user.ClientSession != nil {
-		user.ClientSession.SendMessage(fmt.Sprintf(":%s 332 %s %s :%s", cm.serverName, user.Nickname, channelName, channel.Topic))
-		
-		// Send user list to the joining user
-		userList := channel.GetUserList()
-		user.ClientSession.SendMessage(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, user.Nickname, channelName, strings.Join(userList, " ")))
-		user.ClientSession.SendMessage(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, user.Nickname, channelName))
-	}
+	user.BroadcastToSessions(fmt.Sprintf(":%s 332 %s %s :%s", cm.serverName, user.Nickname, channelName, channel.Topic))
+	
+	// Send user list to the joining user
+	userList := channel.GetUserList()
+	user.BroadcastToSessions(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, user.Nickname, channelName, strings.Join(userList, " ")))
+	user.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, user.Nickname, channelName))
 
 	return nil
 }
