@@ -132,13 +132,16 @@ func TestListenerMaxConnections(t *testing.T) {
 		} else {
 			connections = append(connections, conn)
 		}
+		// Add a small delay between connection attempts
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	// Wait for a short time to allow the server to process all connections
 	time.Sleep(100 * time.Millisecond)
 
-	if len(connections) != maxConnections {
-		t.Errorf("Expected %d connections, got %d", maxConnections, len(connections))
+	actualConnections := len(connections)
+	if actualConnections != maxConnections {
+		t.Errorf("Expected %d connections, got %d", maxConnections, actualConnections)
 	}
 
 	listener.Stop()
