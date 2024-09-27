@@ -57,7 +57,7 @@ func (ph *ProtocolHandler) GetUser() *models.User {
 
 func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) {
 	if ph == nil || ph.stateManager == nil || ph.stateManager.UserManager == nil {
-		return "", fmt.Errorf("ProtocolHandler or its components are nil")
+		return nil, fmt.Errorf("ProtocolHandler or its components are nil")
 	}
 	if len(params) < 1 {
 		return nil, fmt.Errorf("not enough parameters for NICK command")
