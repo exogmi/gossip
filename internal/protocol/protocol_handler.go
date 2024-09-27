@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/exogmi/gossip/config"
 	"github.com/exogmi/gossip/internal/models"
 	"github.com/exogmi/gossip/internal/state"
 )
