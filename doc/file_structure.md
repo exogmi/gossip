@@ -13,7 +13,7 @@ Project Structure:
 │   │   └── client_session.go
 │   ├── protocol/
 │   │   ├── parser.go
-│   │   └── command_handler.go
+│   │   └── protocol_handler.go
 │   ├── state/
 │   │   ├── state_manager.go
 │   │   ├── user_manager.go

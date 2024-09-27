@@ -13,7 +13,7 @@
 
 3. Protocol Layer:
    - ProtocolParser: Parses incoming IRC messages.
-   - CommandHandler: Processes parsed commands and triggers appropriate actions.
+   - ProtocolHandler: Processes parsed commands and triggers appropriate actions.
 
 4. State Management:
    - StateManager: Centralizes access to all state-related operations.
@@ -37,7 +37,7 @@ Architecture Overview:
 
 7. ProtocolParser receives raw input from ClientSessions and converts it into structured commands.
 
-8. CommandHandler processes parsed commands, interacting with other components as needed.
+8. ProtocolHandler processes parsed commands, interacting with other components as needed.
 
 9. StateManager provides a unified interface for accessing and modifying server state.
 
