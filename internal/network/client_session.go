@@ -68,7 +68,12 @@ func (cs *ClientSession) Start() {
 }
 
 func (cs *ClientSession) Stop() {
-	close(cs.stopChan)
+	select {
+	case <-cs.stopChan:
+		// Channel is already closed, do nothing
+	default:
+		close(cs.stopChan)
+	}
 	cs.conn.Close()
 	cs.wg.Wait()
 	if cs.verbosity >= config.Debug {
