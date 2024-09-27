@@ -12,6 +12,7 @@ const (
 	PrivateMessage MessageType = iota
 	Notice
 	ChannelMessage
+	ServerMessage
 )
 
 // Message represents an IRC message

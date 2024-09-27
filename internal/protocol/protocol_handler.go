@@ -101,17 +101,18 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 
 		// Notify all channels the user is in about the nickname change
 		nickChangeMsg := fmt.Sprintf(":%s!%s@%s NICK :%s", oldNick, ph.user.Username, ph.user.Host, newNick)
+		serverMsg := &models.Message{
+			Sender:  ph.user,
+			Content: nickChangeMsg,
+			Type:    models.ServerMessage,
+		}
 		for _, channelName := range ph.user.Channels {
 			channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
 			if err != nil {
 				log.Printf("Failed to get channel %s: %v", channelName, err)
 				continue
 			}
-			ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
-				Sender:  ph.user,
-				Content: nickChangeMsg,
-				Type:    models.ChannelMessage,
-			}, nil)
+			ph.stateManager.ChannelManager.BroadcastToChannel(channel, serverMsg, ph.user)
 		}
 
 		// Send the nickname change message to the user who changed their nickname

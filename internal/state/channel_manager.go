@@ -128,7 +128,12 @@ func (cm *ChannelManager) BroadcastToChannel(channel *models.Channel, message *m
 	for _, user := range channel.Users {
 		if user != exclude {
 			if user.ClientSession != nil {
-				user.ClientSession.SendMessage(fmt.Sprintf(":%s!%s@%s PRIVMSG %s :%s", message.Sender.Nickname, message.Sender.Username, message.Sender.Host, channel.Name, message.Content))
+				switch message.Type {
+				case models.ChannelMessage:
+					user.ClientSession.SendMessage(fmt.Sprintf(":%s!%s@%s PRIVMSG %s :%s", message.Sender.Nickname, message.Sender.Username, message.Sender.Host, channel.Name, message.Content))
+				case models.ServerMessage:
+					user.ClientSession.SendMessage(message.Content)
+				}
 			}
 		}
 	}
