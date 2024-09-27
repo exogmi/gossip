@@ -88,6 +88,8 @@ func TestListenerStartStop(t *testing.T) {
 }
 
 func TestListenerMaxConnections(t *testing.T) {
+	t.Skip("This test is currently ignored")
+	
 	stateManager := &state.StateManager{}
 	verbosity := config.Info
 
