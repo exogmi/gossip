@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/exogmi/gossip/internal/models"
 	"github.com/exogmi/gossip/internal/state"
@@ -22,10 +23,10 @@ func NewProtocolHandler(stateManager *state.StateManager) *ProtocolHandler {
 
 func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) ([]string, error) {
 	if ph == nil {
-		return "", fmt.Errorf("ProtocolHandler is nil")
+		return nil, fmt.Errorf("ProtocolHandler is nil")
 	}
 	if command == nil {
-		return "", fmt.Errorf("Command is nil")
+		return nil, fmt.Errorf("Command is nil")
 	}
 
 	log.Printf("Handling command: %s", command.Name)
