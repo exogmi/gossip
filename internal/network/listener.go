@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -10,7 +9,7 @@ import (
 )
 
 type Listener struct {
-	tcpListener net.Listener
+	tcpListener  net.Listener
 	stateManager *state.StateManager
 	stopChan     chan struct{}
 	wg           sync.WaitGroup
@@ -23,7 +22,7 @@ func NewListener(address string, stateManager *state.StateManager) (*Listener, e
 	}
 
 	return &Listener{
-		tcpListener: tcpListener,
+		tcpListener:  tcpListener,
 		stateManager: stateManager,
 		stopChan:     make(chan struct{}),
 	}, nil

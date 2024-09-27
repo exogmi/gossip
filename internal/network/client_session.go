@@ -2,7 +2,6 @@ package network
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -14,28 +13,28 @@ import (
 )
 
 type ClientSession struct {
-	conn           net.Conn
-	user           *models.User
-	stateManager   *state.StateManager
+	conn            net.Conn
+	user            *models.User
+	stateManager    *state.StateManager
 	protocolHandler *protocol.ProtocolHandler
-	reader         *bufio.Reader
-	writer         *bufio.Writer
-	incoming       chan string
-	outgoing       chan string
-	stopChan       chan struct{}
-	wg             sync.WaitGroup
+	reader          *bufio.Reader
+	writer          *bufio.Writer
+	incoming        chan string
+	outgoing        chan string
+	stopChan        chan struct{}
+	wg              sync.WaitGroup
 }
 
 func NewClientSession(conn net.Conn, stateManager *state.StateManager) *ClientSession {
 	return &ClientSession{
-		conn:           conn,
-		stateManager:   stateManager,
+		conn:            conn,
+		stateManager:    stateManager,
 		protocolHandler: protocol.NewProtocolHandler(stateManager),
-		reader:         bufio.NewReader(conn),
-		writer:         bufio.NewWriter(conn),
-		incoming:       make(chan string, 100),
-		outgoing:       make(chan string, 100),
-		stopChan:       make(chan struct{}),
+		reader:          bufio.NewReader(conn),
+		writer:          bufio.NewWriter(conn),
+		incoming:        make(chan string, 100),
+		outgoing:        make(chan string, 100),
+		stopChan:        make(chan struct{}),
 	}
 }
 
