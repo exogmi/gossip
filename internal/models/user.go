@@ -20,6 +20,7 @@ type User struct {
 	Host            string
 	CreatedAt       time.Time
 	LastSeen        time.Time
+	LastDisconnect  time.Time
 	Channels        []string
 	Modes           UserModes
 	ClientSessions  map[string]ClientSession
@@ -61,6 +62,9 @@ func (u *User) RemoveClientSession(sessionID string) {
 	u.sessionMutex.Lock()
 	defer u.sessionMutex.Unlock()
 	delete(u.ClientSessions, sessionID)
+	if len(u.ClientSessions) == 0 {
+		u.LastDisconnect = time.Now()
+	}
 }
 
 // BroadcastToSessions sends a message to all active sessions of the user

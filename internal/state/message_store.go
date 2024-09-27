@@ -46,6 +46,19 @@ func (ms *MessageStore) GetMessages(target string, limit int) ([]*models.Message
 	return messages[len(messages)-limit:], nil
 }
 
+func (ms *MessageStore) GetMessagesSince(target string, since time.Time) ([]*models.Message, error) {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	var missedMessages []*models.Message
+	for _, msg := range ms.messages[target] {
+		if msg.Timestamp.After(since) {
+			missedMessages = append(missedMessages, msg)
+		}
+	}
+	return missedMessages, nil
+}
+
 func (ms *MessageStore) ClearMessages(target string) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()

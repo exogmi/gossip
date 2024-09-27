@@ -17,15 +17,17 @@ var (
 )
 
 type ChannelManager struct {
-	channels   map[string]*models.Channel // Key: channel name
-	mu         sync.RWMutex
-	serverName string
+	channels     map[string]*models.Channel // Key: channel name
+	mu           sync.RWMutex
+	serverName   string
+	stateManager *StateManager
 }
 
-func NewChannelManager(serverName string) *ChannelManager {
+func NewChannelManager(serverName string, stateManager *StateManager) *ChannelManager {
 	return &ChannelManager{
-		channels:   make(map[string]*models.Channel),
-		serverName: serverName,
+		channels:     make(map[string]*models.Channel),
+		serverName:   serverName,
+		stateManager: stateManager,
 	}
 }
 
@@ -99,12 +101,15 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string, key
 		}
 	}
 
-	channel.AddUser(user)
-	user.JoinChannel(channelName)
+	wasInChannel := user.IsInChannel(channelName)
+	if !wasInChannel {
+		channel.AddUser(user)
+		user.JoinChannel(channelName)
 
-	// If this is the first user, make them an operator
-	if len(channel.Users) == 1 {
-		channel.Operators[user.Nickname] = true
+		// If this is the first user, make them an operator
+		if len(channel.Users) == 1 {
+			channel.Operators[user.Nickname] = true
+		}
 	}
 
 	// Broadcast JOIN message to all users in the channel
@@ -125,6 +130,19 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string, key
 	for _, u := range channel.Users {
 		u.BroadcastToSessions(fmt.Sprintf(":%s 353 %s = %s :%s", cm.serverName, u.Nickname, channelName, strings.Join(userList, " ")))
 		u.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, u.Nickname, channelName))
+	}
+
+	// Replay missed messages if the user was already in the channel
+	if wasInChannel {
+		missedMessages, err := cm.stateManager.MessageStore.GetMessagesSince(channelName, user.LastDisconnect)
+		if err != nil {
+			log.Printf("Error retrieving missed messages for user %s in channel %s: %v", user.Nickname, channelName, err)
+		} else {
+			for _, msg := range missedMessages {
+				formattedMsg := fmt.Sprintf(":%s!%s@%s PRIVMSG %s :%s", msg.Sender.Nickname, msg.Sender.Username, msg.Sender.Host, channelName, msg.Content)
+				user.BroadcastToSessions(formattedMsg)
+			}
+		}
 	}
 
 	log.Printf("User %s joined channel %s", user.Nickname, channelName)

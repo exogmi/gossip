@@ -78,6 +78,9 @@ func (cs *ClientSession) Stop() {
 	}
 	if cs.user != nil {
 		cs.user.RemoveClientSession(cs.sessionID)
+		if len(cs.user.ClientSessions) == 0 {
+			cs.user.LastDisconnect = time.Now()
+		}
 	}
 	cs.conn.Close()
 	cs.wg.Wait()

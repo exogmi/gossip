@@ -16,14 +16,14 @@ type StateManager struct {
 
 // NewStateManager creates a new StateManager instance
 func NewStateManager(userManager *UserManager, messageStore *MessageStore, serverName string, verbosity config.VerbosityLevel) *StateManager {
-	channelManager := NewChannelManager(serverName)
-	return &StateManager{
-		UserManager:    userManager,
-		ChannelManager: channelManager,
-		MessageStore:   messageStore,
-		ServerName:     serverName,
-		Verbosity:      verbosity,
+	sm := &StateManager{
+		UserManager:  userManager,
+		MessageStore: messageStore,
+		ServerName:   serverName,
+		Verbosity:    verbosity,
 	}
+	sm.ChannelManager = NewChannelManager(serverName, sm)
+	return sm
 }
 
 // GetUser retrieves a user by nickname
