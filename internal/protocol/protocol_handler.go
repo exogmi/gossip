@@ -56,19 +56,26 @@ func (ph *ProtocolHandler) handleNickCommand(user *models.User, params []string)
 	if ph == nil || ph.stateManager == nil || ph.stateManager.UserManager == nil {
 		return "", fmt.Errorf("ProtocolHandler or its components are nil")
 	}
-	if user == nil {
-		return "", fmt.Errorf("User is nil")
-	}
 	if len(params) < 1 {
 		return "", fmt.Errorf("not enough parameters for NICK command")
 	}
 	newNick := params[0]
 
-	log.Printf("Changing nickname for user %s to %s", user.Nickname, newNick)
-
-	if err := ph.stateManager.UserManager.ChangeNickname(user.Nickname, newNick); err != nil {
-		log.Printf("Failed to change nickname: %v", err)
-		return "", fmt.Errorf("failed to change nickname: %w", err)
+	if user == nil {
+		// Create a new user if it doesn't exist
+		newUser := models.NewUser(newNick, "", "", "")
+		if err := ph.stateManager.UserManager.AddUser(newUser); err != nil {
+			log.Printf("Failed to add new user: %v", err)
+			return "", fmt.Errorf("failed to add new user: %w", err)
+		}
+		user = newUser
+		log.Printf("Created new user with nickname %s", newNick)
+	} else {
+		log.Printf("Changing nickname for user %s to %s", user.Nickname, newNick)
+		if err := ph.stateManager.UserManager.ChangeNickname(user.Nickname, newNick); err != nil {
+			log.Printf("Failed to change nickname: %v", err)
+			return "", fmt.Errorf("failed to change nickname: %w", err)
+		}
 	}
 
 	user.Nickname = newNick
@@ -81,10 +88,20 @@ func (ph *ProtocolHandler) handleUserCommand(user *models.User, params []string)
 	}
 	username, _, _, realname := params[0], params[1], params[2], params[3]
 
+	if user == nil {
+		return "", fmt.Errorf("user not initialized")
+	}
+
 	log.Printf("Setting user information for %s: username=%s, realname=%s", user.Nickname, username, realname)
 
 	user.Username = username
 	user.Realname = realname
+	user.Host = "localhost" // Set a default host
+
+	if err := ph.stateManager.UserManager.UpdateUser(user); err != nil {
+		log.Printf("Failed to update user: %v", err)
+		return "", fmt.Errorf("failed to update user: %w", err)
+	}
 
 	welcomeMsg := fmt.Sprintf(":%s 001 %s :Welcome to the Gossip IRC Network %s!%s@%s",
 		ph.stateManager.ServerName, user.Nickname, user.Nickname, user.Username, user.Host)

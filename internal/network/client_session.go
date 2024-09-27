@@ -29,6 +29,7 @@ type ClientSession struct {
 	wg              sync.WaitGroup
 	verbosity       config.VerbosityLevel
 	clientID        string
+	userInitialized bool
 }
 
 func NewClientSession(conn net.Conn, stateManager *state.StateManager, verbosity config.VerbosityLevel) *ClientSession {
@@ -126,13 +127,6 @@ func (cs *ClientSession) handleLoop() {
 				log.Printf("Error: ProtocolHandler is nil for client %s", cs.clientID)
 				continue
 			}
-			if cs.user == nil {
-				if cs.verbosity >= config.Debug {
-					log.Printf("User is nil for client %s", cs.clientID)
-				}
-				// Initialize the user if it's nil
-				cs.user = &models.User{}
-			}
 			if cs.verbosity >= config.Debug {
 				log.Printf("Handling command for client %s: %s", cs.clientID, command.Name)
 			}
@@ -143,6 +137,10 @@ func (cs *ClientSession) handleLoop() {
 			}
 			if response != "" {
 				cs.outgoing <- response
+			}
+			if !cs.userInitialized && (command.Name == "NICK" || command.Name == "USER") {
+				cs.user, _ = cs.stateManager.UserManager.GetUser(cs.user.Nickname)
+				cs.userInitialized = true
 			}
 			if command.Name == "QUIT" {
 				cs.Stop()
