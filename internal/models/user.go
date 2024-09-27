@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -12,16 +13,17 @@ type ClientSession interface {
 
 // User represents an IRC user
 type User struct {
-	ID            string
-	Nickname      string
-	Username      string
-	Realname      string
-	Host          string
-	CreatedAt     time.Time
-	LastSeen      time.Time
-	Channels      []string
-	Modes         UserModes
-	ClientSession ClientSession
+	ID              string
+	Nickname        string
+	Username        string
+	Realname        string
+	Host            string
+	CreatedAt       time.Time
+	LastSeen        time.Time
+	Channels        []string
+	Modes           UserModes
+	ClientSessions  map[string]ClientSession
+	sessionMutex    sync.RWMutex
 }
 
 // UserModes represents the modes a user can have
@@ -34,15 +36,39 @@ type UserModes struct {
 // NewUser creates a new User instance
 func NewUser(nickname, username, realname, host string) *User {
 	return &User{
-		ID:        generateUniqueID(), // TODO: Implement this function
-		Nickname:  nickname,
-		Username:  username,
-		Realname:  realname,
-		Host:      host,
-		CreatedAt: time.Now(),
-		LastSeen:  time.Now(),
-		Channels:  make([]string, 0),
-		Modes:     UserModes{},
+		ID:              generateUniqueID(),
+		Nickname:        nickname,
+		Username:        username,
+		Realname:        realname,
+		Host:            host,
+		CreatedAt:       time.Now(),
+		LastSeen:        time.Now(),
+		Channels:        make([]string, 0),
+		Modes:           UserModes{},
+		ClientSessions:  make(map[string]ClientSession),
+	}
+}
+
+// AddClientSession adds a new client session for the user
+func (u *User) AddClientSession(sessionID string, session ClientSession) {
+	u.sessionMutex.Lock()
+	defer u.sessionMutex.Unlock()
+	u.ClientSessions[sessionID] = session
+}
+
+// RemoveClientSession removes a client session for the user
+func (u *User) RemoveClientSession(sessionID string) {
+	u.sessionMutex.Lock()
+	defer u.sessionMutex.Unlock()
+	delete(u.ClientSessions, sessionID)
+}
+
+// BroadcastToSessions sends a message to all active sessions of the user
+func (u *User) BroadcastToSessions(message string) {
+	u.sessionMutex.RLock()
+	defer u.sessionMutex.RUnlock()
+	for _, session := range u.ClientSessions {
+		session.SendMessage(message)
 	}
 }
 

@@ -29,6 +29,7 @@ type ClientSession struct {
 	wg              sync.WaitGroup
 	verbosity       config.VerbosityLevel
 	clientID        string
+	sessionID       string
 }
 
 // Ensure ClientSession implements the models.ClientSession interface
@@ -36,7 +37,7 @@ var _ models.ClientSession = (*ClientSession)(nil)
 
 func (cs *ClientSession) SetUser(user *models.User) {
 	cs.user = user
-	user.ClientSession = cs
+	user.AddClientSession(cs.sessionID, cs)
 }
 
 func NewClientSession(conn net.Conn, stateManager *state.StateManager, verbosity config.VerbosityLevel) *ClientSession {
@@ -52,6 +53,7 @@ func NewClientSession(conn net.Conn, stateManager *state.StateManager, verbosity
 		stopChan:        make(chan struct{}),
 		verbosity:       verbosity,
 		clientID:        uuid.New().String(),
+		sessionID:       uuid.New().String(),
 	}
 }
 
@@ -73,6 +75,9 @@ func (cs *ClientSession) Stop() {
 		// Channel is already closed, do nothing
 	default:
 		close(cs.stopChan)
+	}
+	if cs.user != nil {
+		cs.user.RemoveClientSession(cs.sessionID)
 	}
 	cs.conn.Close()
 	cs.wg.Wait()

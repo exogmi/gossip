@@ -293,10 +293,15 @@ func (ph *ProtocolHandler) handlePrivmsgCommand(user *models.User, params []stri
 		ph.stateManager.MessageStore.StoreMessage(msg)
 		ph.stateManager.ChannelManager.BroadcastToChannel(channel, msg, user)
 	} else {
+		targetUser, err := ph.stateManager.UserManager.GetUser(target)
+		if err != nil {
+			log.Printf("User %s not found", target)
+			return nil, fmt.Errorf("user not found: %s", target)
+		}
 		msg := models.NewMessage(user, target, message, models.PrivateMessage)
 		ph.stateManager.MessageStore.StoreMessage(msg)
-		// TODO: Implement message delivery to target user
-		log.Printf("Private message delivery not yet implemented")
+		formattedMsg := fmt.Sprintf(":%s!%s@%s PRIVMSG %s :%s", user.Nickname, user.Username, user.Host, target, message)
+		targetUser.BroadcastToSessions(formattedMsg)
 	}
 
 	return nil, nil
