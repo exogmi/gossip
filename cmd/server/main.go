@@ -27,9 +27,8 @@ func main() {
 
 	// Initialize state components
 	userManager := state.NewUserManager()
-	channelManager := state.NewChannelManager()
 	messageStore := state.NewMessageStore(1000) // Store up to 1000 messages per target
-	stateManager := state.NewStateManager(userManager, channelManager, messageStore, "irc.gossip.local")
+	stateManager := state.NewStateManager(userManager, messageStore, "irc.gossip.local")
 
 	// Start periodic cleanup of old messages
 	messageStore.StartPeriodicCleanup(1 * time.Hour)

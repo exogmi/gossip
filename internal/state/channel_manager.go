@@ -2,6 +2,8 @@ package state
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/exogmi/gossip/internal/models"
@@ -13,13 +15,15 @@ var (
 )
 
 type ChannelManager struct {
-	channels map[string]*models.Channel // Key: channel name
-	mu       sync.RWMutex
+	channels   map[string]*models.Channel // Key: channel name
+	mu         sync.RWMutex
+	serverName string
 }
 
-func NewChannelManager() *ChannelManager {
+func NewChannelManager(serverName string) *ChannelManager {
 	return &ChannelManager{
-		channels: make(map[string]*models.Channel),
+		channels:   make(map[string]*models.Channel),
+		serverName: serverName,
 	}
 }
 
