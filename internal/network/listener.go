@@ -18,7 +18,7 @@ type Listener struct {
 	wg             sync.WaitGroup
 	verbosity      config.VerbosityLevel
 	maxConnections int
-	activeConns    int32
+	ActiveConns    int32
 }
 
 func NewListener(address string, stateManager *state.StateManager, verbosity config.VerbosityLevel) (*Listener, error) {
@@ -55,13 +55,13 @@ func (l *Listener) Start() error {
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			if atomic.LoadInt32(&l.activeConns) >= int32(l.maxConnections) {
+			if atomic.LoadInt32(&l.ActiveConns) >= int32(l.maxConnections) {
 				log.Printf("Maximum connections reached, rejecting connection from %s", conn.RemoteAddr())
 				conn.Close()
 				continue
 			}
 
-			atomic.AddInt32(&l.activeConns, 1)
+			atomic.AddInt32(&l.ActiveConns, 1)
 
 			if l.verbosity >= config.Debug {
 				log.Printf("New connection accepted from %s", conn.RemoteAddr())
@@ -70,7 +70,7 @@ func (l *Listener) Start() error {
 			l.wg.Add(1)
 			go func() {
 				defer l.wg.Done()
-				defer atomic.AddInt32(&l.activeConns, -1)
+				defer atomic.AddInt32(&l.ActiveConns, -1)
 				session := NewClientSession(conn, l.stateManager, l.verbosity)
 				session.Start()
 			}()

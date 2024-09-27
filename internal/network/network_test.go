@@ -126,23 +126,29 @@ func TestListenerMaxConnections(t *testing.T) {
 		if err != nil {
 			if i >= maxConnections {
 				// Expected error for connections exceeding the limit
+				t.Logf("Connection %d failed as expected: %v", i+1, err)
 				continue
 			}
 			t.Errorf("Failed to establish connection %d: %v", i+1, err)
 		} else {
 			connections = append(connections, conn)
+			t.Logf("Connection %d established successfully", i+1)
 		}
 		// Add a small delay between connection attempts
 		time.Sleep(50 * time.Millisecond)
 	}
 
 	// Wait for a short time to allow the server to process all connections
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	actualConnections := len(connections)
+	t.Logf("Actual connections: %d", actualConnections)
 	if actualConnections != maxConnections {
 		t.Errorf("Expected %d connections, got %d", maxConnections, actualConnections)
 	}
+
+	// Check the number of active connections in the listener
+	t.Logf("Active connections in listener: %d", atomic.LoadInt32(&listener.activeConns))
 
 	listener.Stop()
 
@@ -155,6 +161,7 @@ func TestListenerMaxConnections(t *testing.T) {
 
 	select {
 	case <-done:
+		t.Log("Listener stopped successfully")
 	case <-time.After(5 * time.Second):
 		t.Fatal("Test timed out")
 	}
