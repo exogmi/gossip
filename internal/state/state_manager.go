@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/exogmi/gossip/config"
 	"github.com/exogmi/gossip/internal/models"
 )
 
@@ -10,16 +11,18 @@ type StateManager struct {
 	ChannelManager *ChannelManager
 	MessageStore   *MessageStore
 	ServerName     string
+	Verbosity      config.VerbosityLevel
 }
 
 // NewStateManager creates a new StateManager instance
-func NewStateManager(userManager *UserManager, messageStore *MessageStore, serverName string) *StateManager {
+func NewStateManager(userManager *UserManager, messageStore *MessageStore, serverName string, verbosity config.VerbosityLevel) *StateManager {
 	channelManager := NewChannelManager(serverName)
 	return &StateManager{
 		UserManager:    userManager,
 		ChannelManager: channelManager,
 		MessageStore:   messageStore,
 		ServerName:     serverName,
+		Verbosity:      verbosity,
 	}
 }
 

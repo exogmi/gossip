@@ -61,20 +61,28 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, message *IRCMessage)
 }
 
 func (ph *ProtocolHandler) handleModeCommand(user *models.User, params []string) ([]string, error) {
-	log.Printf("[DEBUG] Handling MODE command for user %s with params: %v", user.Nickname, params)
+	if ph.stateManager.Verbosity >= config.Debug {
+		log.Printf("[DEBUG] Handling MODE command for user %s with params: %v", user.Nickname, params)
+	}
 
 	if len(params) < 1 {
-		log.Printf("[DEBUG] Not enough parameters for MODE command")
+		if ph.stateManager.Verbosity >= config.Debug {
+			log.Printf("[DEBUG] Not enough parameters for MODE command")
+		}
 		return []string{fmt.Sprintf(":%s 461 %s MODE :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
 	}
 
 	targetName := params[0]
-	log.Printf("[DEBUG] MODE target: %s", targetName)
+	if ph.stateManager.Verbosity >= config.Debug {
+		log.Printf("[DEBUG] MODE target: %s", targetName)
+	}
 
 	channel, err := ph.stateManager.GetChannel(targetName)
 
 	if err == nil { // Channel exists
-		log.Printf("[DEBUG] Channel %s exists", targetName)
+		if ph.stateManager.Verbosity >= config.Debug {
+			log.Printf("[DEBUG] Channel %s exists", targetName)
+		}
 		if len(params) < 2 {
 			modes := "+"
 			if channel.Key != "" {
@@ -83,20 +91,28 @@ func (ph *ProtocolHandler) handleModeCommand(user *models.User, params []string)
 					modes += " " + channel.Key
 				}
 			}
-			log.Printf("[DEBUG] Returning current channel modes: %s", modes)
+			if ph.stateManager.Verbosity >= config.Debug {
+				log.Printf("[DEBUG] Returning current channel modes: %s", modes)
+			}
 			return []string{fmt.Sprintf(":%s 324 %s %s %s", ph.stateManager.ServerName, user.Nickname, targetName, modes)}, nil
 		}
 
 		flag := params[1]
-		log.Printf("[DEBUG] MODE flag: %s", flag)
+		if ph.stateManager.Verbosity >= config.Debug {
+			log.Printf("[DEBUG] MODE flag: %s", flag)
+		}
 		if flag == "+k" {
 			if len(params) < 3 {
-				log.Printf("[DEBUG] Not enough parameters for +k flag")
+				if ph.stateManager.Verbosity >= config.Debug {
+					log.Printf("[DEBUG] Not enough parameters for +k flag")
+				}
 				return []string{fmt.Sprintf(":%s 461 %s MODE :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
 			}
 			key := params[2]
 			if user.IsInChannel(channel.Name) {
-				log.Printf("[DEBUG] Setting channel key for %s to %s", channel.Name, key)
+				if ph.stateManager.Verbosity >= config.Debug {
+					log.Printf("[DEBUG] Setting channel key for %s to %s", channel.Name, key)
+				}
 				channel.Key = key
 				msg := fmt.Sprintf(":%s!%s@%s MODE %s +k %s", user.Nickname, user.Username, user.Host, channel.Name, key)
 				ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
@@ -106,11 +122,15 @@ func (ph *ProtocolHandler) handleModeCommand(user *models.User, params []string)
 				}, nil)
 				return []string{msg}, nil
 			}
-			log.Printf("[DEBUG] User %s not in channel %s", user.Nickname, channel.Name)
+			if ph.stateManager.Verbosity >= config.Debug {
+				log.Printf("[DEBUG] User %s not in channel %s", user.Nickname, channel.Name)
+			}
 			return []string{fmt.Sprintf(":%s 442 %s :You're not on that channel", ph.stateManager.ServerName, targetName)}, nil
 		} else if flag == "-k" {
 			if user.IsInChannel(channel.Name) {
-				log.Printf("[DEBUG] Removing channel key for %s", channel.Name)
+				if ph.stateManager.Verbosity >= config.Debug {
+					log.Printf("[DEBUG] Removing channel key for %s", channel.Name)
+				}
 				channel.Key = ""
 				msg := fmt.Sprintf(":%s!%s@%s MODE %s -k", user.Nickname, user.Username, user.Host, channel.Name)
 				ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
@@ -120,22 +140,34 @@ func (ph *ProtocolHandler) handleModeCommand(user *models.User, params []string)
 				}, nil)
 				return []string{msg}, nil
 			}
-			log.Printf("[DEBUG] User %s not in channel %s", user.Nickname, channel.Name)
+			if ph.stateManager.Verbosity >= config.Debug {
+				log.Printf("[DEBUG] User %s not in channel %s", user.Nickname, channel.Name)
+			}
 			return []string{fmt.Sprintf(":%s 442 %s :You're not on that channel", ph.stateManager.ServerName, targetName)}, nil
 		} else {
-			log.Printf("[DEBUG] Unknown MODE flag: %s", flag)
+			if ph.stateManager.Verbosity >= config.Debug {
+				log.Printf("[DEBUG] Unknown MODE flag: %s", flag)
+			}
 			return []string{fmt.Sprintf(":%s 472 %s %s :Unknown MODE flag", ph.stateManager.ServerName, user.Nickname, flag)}, nil
 		}
 	} else if targetName == user.Nickname {
-		log.Printf("[DEBUG] Handling user mode for %s", user.Nickname)
+		if ph.stateManager.Verbosity >= config.Debug {
+			log.Printf("[DEBUG] Handling user mode for %s", user.Nickname)
+		}
 		if len(params) == 1 {
-			log.Printf("[DEBUG] Returning current user modes")
+			if ph.stateManager.Verbosity >= config.Debug {
+				log.Printf("[DEBUG] Returning current user modes")
+			}
 			return []string{fmt.Sprintf(":%s 221 %s +", ph.stateManager.ServerName, user.Nickname)}, nil
 		}
-		log.Printf("[DEBUG] Unknown user MODE flag")
+		if ph.stateManager.Verbosity >= config.Debug {
+			log.Printf("[DEBUG] Unknown user MODE flag")
+		}
 		return []string{fmt.Sprintf(":%s 501 %s :Unknown MODE flag", ph.stateManager.ServerName, user.Nickname)}, nil
 	} else {
-		log.Printf("[DEBUG] Channel %s not found", targetName)
+		if ph.stateManager.Verbosity >= config.Debug {
+			log.Printf("[DEBUG] Channel %s not found", targetName)
+		}
 		return []string{fmt.Sprintf(":%s 403 %s :No such channel", ph.stateManager.ServerName, targetName)}, nil
 	}
 }
