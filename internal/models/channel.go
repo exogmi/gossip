@@ -16,6 +16,7 @@ type Channel struct {
 	BanList     []string
 	InviteList  []string
 	Key         string
+	Operators   map[string]bool
 }
 
 // ChannelModes represents the modes a channel can have
@@ -39,6 +40,7 @@ func NewChannel(name string) *Channel {
 		UserLimits:  0,
 		BanList:     make([]string, 0),
 		InviteList:  make([]string, 0),
+		Operators:   make(map[string]bool),
 	}
 }
 

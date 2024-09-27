@@ -83,8 +83,21 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string) err
 		return ErrChannelNotFound
 	}
 
+	// Check if the user is banned
+	userMask := fmt.Sprintf("%s!%s@%s", user.Nickname, user.Username, user.Host)
+	for _, banMask := range channel.BanList {
+		if matchesMask(userMask, banMask) {
+			return fmt.Errorf("cannot join channel: you're banned")
+		}
+	}
+
 	channel.AddUser(user)
 	user.JoinChannel(channelName)
+
+	// If this is the first user, make them an operator
+	if len(channel.Users) == 1 {
+		channel.Operators[user.Nickname] = true
+	}
 
 	// Broadcast JOIN message to all users in the channel
 	joinMsg := fmt.Sprintf(":%s!%s@%s JOIN %s", user.Nickname, user.Username, user.Host, channelName)
@@ -101,6 +114,14 @@ func (cm *ChannelManager) JoinChannel(user *models.User, channelName string) err
 	user.BroadcastToSessions(fmt.Sprintf(":%s 366 %s %s :End of /NAMES list", cm.serverName, user.Nickname, channelName))
 
 	return nil
+}
+
+func matchesMask(str, mask string) bool {
+	// Simple wildcard matching
+	// This is a basic implementation and might need to be improved for more complex IRC mask matching
+	regexPattern := "^" + strings.ReplaceAll(strings.ReplaceAll(mask, ".", "\\."), "*", ".*") + "$"
+	matched, _ := regexp.MatchString(regexPattern, str)
+	return matched
 }
 
 func (cm *ChannelManager) LeaveChannel(user *models.User, channelName string) error {

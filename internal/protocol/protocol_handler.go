@@ -56,6 +56,10 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, message *IRCMessage)
 		return ph.handleIsonCommand(user, message.Params)
 	case "MODE":
 		return ph.handleModeCommand(user, message.Params)
+	case "KICK":
+		return ph.handleKickCommand(user, message.Params)
+	case "BAN":
+		return ph.handleBanCommand(user, message.Params)
 	default:
 		return nil, fmt.Errorf("unknown command: %s", message.Command)
 	}
@@ -229,6 +233,73 @@ func (ph *ProtocolHandler) handleIsonCommand(user *models.User, params []string)
 	}
 
 	return []string{fmt.Sprintf(":%s 303 %s :%s", ph.stateManager.ServerName, user.Nickname, strings.Join(onlineUsers, " "))}, nil
+}
+
+func (ph *ProtocolHandler) handleKickCommand(user *models.User, params []string) ([]string, error) {
+	if len(params) < 2 {
+		return []string{fmt.Sprintf(":%s 461 %s KICK :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+	}
+
+	channelName, targetNick := params[0], params[1]
+	reason := "No reason given"
+	if len(params) > 2 {
+		reason = strings.Join(params[2:], " ")
+	}
+
+	channel, err := ph.stateManager.GetChannel(channelName)
+	if err != nil {
+		return []string{fmt.Sprintf(":%s 403 %s %s :No such channel", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+	}
+
+	if !channel.Operators[user.Nickname] {
+		return []string{fmt.Sprintf(":%s 482 %s %s :You're not channel operator", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+	}
+
+	targetUser, err := ph.stateManager.GetUser(targetNick)
+	if err != nil {
+		return []string{fmt.Sprintf(":%s 401 %s %s :No such nick", ph.stateManager.ServerName, user.Nickname, targetNick)}, nil
+	}
+
+	if !targetUser.IsInChannel(channelName) {
+		return []string{fmt.Sprintf(":%s 441 %s %s %s :They aren't on that channel", ph.stateManager.ServerName, user.Nickname, targetNick, channelName)}, nil
+	}
+
+	ph.stateManager.ChannelManager.LeaveChannel(targetUser, channelName)
+	kickMsg := fmt.Sprintf(":%s!%s@%s KICK %s %s :%s", user.Nickname, user.Username, user.Host, channelName, targetNick, reason)
+	ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+		Sender:  user,
+		Content: kickMsg,
+		Type:    models.ServerMessage,
+	}, nil)
+
+	return []string{kickMsg}, nil
+}
+
+func (ph *ProtocolHandler) handleBanCommand(user *models.User, params []string) ([]string, error) {
+	if len(params) < 2 {
+		return []string{fmt.Sprintf(":%s 461 %s BAN :Not enough parameters", ph.stateManager.ServerName, user.Nickname)}, nil
+	}
+
+	channelName, targetMask := params[0], params[1]
+
+	channel, err := ph.stateManager.GetChannel(channelName)
+	if err != nil {
+		return []string{fmt.Sprintf(":%s 403 %s %s :No such channel", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+	}
+
+	if !channel.Operators[user.Nickname] {
+		return []string{fmt.Sprintf(":%s 482 %s %s :You're not channel operator", ph.stateManager.ServerName, user.Nickname, channelName)}, nil
+	}
+
+	channel.BanList = append(channel.BanList, targetMask)
+	banMsg := fmt.Sprintf(":%s!%s@%s MODE %s +b %s", user.Nickname, user.Username, user.Host, channelName, targetMask)
+	ph.stateManager.ChannelManager.BroadcastToChannel(channel, &models.Message{
+		Sender:  user,
+		Content: banMsg,
+		Type:    models.ServerMessage,
+	}, nil)
+
+	return []string{banMsg}, nil
 }
 
 func (ph *ProtocolHandler) GetUser() *models.User {
