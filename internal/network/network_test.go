@@ -3,6 +3,7 @@ package network
 import (
 	"bufio"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
