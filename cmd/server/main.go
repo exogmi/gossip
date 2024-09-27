@@ -33,6 +33,10 @@ func main() {
 	// Start periodic cleanup of old messages
 	messageStore.StartPeriodicCleanup(1 * time.Hour)
 
+	if cfg.UseSSL {
+		log.Printf("SSL support enabled on port %d", cfg.SSLPort)
+	}
+
 	srv, err := server.New(cfg, stateManager)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)

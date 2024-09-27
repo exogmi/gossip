@@ -17,7 +17,15 @@ type Server struct {
 
 // New creates a new Server instance
 func New(cfg *config.Config, stateManager *state.StateManager) (*Server, error) {
-	listener, err := network.NewListener(cfg.Address(), stateManager, cfg.Verbosity)
+	listener, err := network.NewListener(
+		cfg.Address(),
+		cfg.SSLAddress(),
+		stateManager,
+		cfg.Verbosity,
+		cfg.UseSSL,
+		cfg.SSLCertFile,
+		cfg.SSLKeyFile,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener: %w", err)
 	}
@@ -32,6 +40,9 @@ func New(cfg *config.Config, stateManager *state.StateManager) (*Server, error) 
 // Run starts the server
 func (s *Server) Run() error {
 	fmt.Printf("Server listening on %s\n", s.config.Address())
+	if s.config.UseSSL {
+		fmt.Printf("SSL Server listening on %s\n", s.config.SSLAddress())
+	}
 	return s.listener.Start()
 }
 
