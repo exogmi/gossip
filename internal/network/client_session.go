@@ -16,6 +16,7 @@ type ClientSession struct {
 	conn            net.Conn
 	user            *models.User
 	stateManager    *state.StateManager
+	protocolParser  *protocol.ProtocolParser
 	protocolHandler *protocol.ProtocolHandler
 	reader          *bufio.Reader
 	writer          *bufio.Writer
@@ -29,6 +30,7 @@ func NewClientSession(conn net.Conn, stateManager *state.StateManager) *ClientSe
 	return &ClientSession{
 		conn:            conn,
 		stateManager:    stateManager,
+		protocolParser:  protocol.NewProtocolParser(),
 		protocolHandler: protocol.NewProtocolHandler(stateManager),
 		reader:          bufio.NewReader(conn),
 		writer:          bufio.NewWriter(conn),
@@ -99,9 +101,14 @@ func (cs *ClientSession) handleLoop() {
 		case <-cs.stopChan:
 			return
 		case msg := <-cs.incoming:
-			response, err := cs.protocolHandler.HandleMessage(cs.user, msg)
+			command, err := cs.protocolParser.Parse(msg)
 			if err != nil {
-				fmt.Printf("Error handling message: %v\n", err)
+				fmt.Printf("Error parsing message: %v\n", err)
+				continue
+			}
+			response, err := cs.protocolHandler.HandleCommand(cs.user, command)
+			if err != nil {
+				fmt.Printf("Error handling command: %v\n", err)
 				continue
 			}
 			if response != "" {

@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/exogmi/gossip/internal/models"
 	"github.com/exogmi/gossip/internal/state"
@@ -18,21 +17,18 @@ func NewProtocolHandler(stateManager *state.StateManager) *ProtocolHandler {
 	}
 }
 
-func (ph *ProtocolHandler) HandleMessage(user *models.User, message string) (string, error) {
-	parts := strings.SplitN(strings.TrimSpace(message), " ", 2)
-	command := strings.ToUpper(parts[0])
-
-	switch command {
+func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (string, error) {
+	switch command.Name {
 	case "NICK":
-		return ph.handleNickCommand(user, parts[1:])
+		return ph.handleNickCommand(user, command.Params)
 	case "USER":
-		return ph.handleUserCommand(user, parts[1:])
+		return ph.handleUserCommand(user, command.Params)
 	case "JOIN":
-		return ph.handleJoinCommand(user, parts[1:])
+		return ph.handleJoinCommand(user, command.Params)
 	case "PRIVMSG":
-		return ph.handlePrivmsgCommand(user, parts[1:])
+		return ph.handlePrivmsgCommand(user, command.Params)
 	default:
-		return "", fmt.Errorf("unknown command: %s", command)
+		return "", fmt.Errorf("unknown command: %s", command.Name)
 	}
 }
 
