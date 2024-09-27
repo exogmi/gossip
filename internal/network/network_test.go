@@ -52,19 +52,37 @@ func TestListenerStartStop(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
+	errChan := make(chan error, 1)
 	go func() {
 		defer wg.Done()
-		err := listener.Start()
-		if err != nil {
-			t.Errorf("Listener.Start() error = %v", err)
-		}
+		errChan <- listener.Start()
 	}()
 
 	// Give the listener some time to start
 	time.Sleep(100 * time.Millisecond)
 
 	listener.Stop()
-	wg.Wait()
+
+	// Wait for the goroutine to finish with a timeout
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Check for any errors from the Start() method
+		select {
+		case err := <-errChan:
+			if err != nil && err != net.ErrClosed {
+				t.Errorf("Listener.Start() unexpected error = %v", err)
+			}
+		default:
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Test timed out")
+	}
 }
 
 func TestListenerMaxConnections(t *testing.T) {
@@ -84,8 +102,8 @@ func TestListenerMaxConnections(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		err := listener.Start()
-		if err != nil {
-			t.Errorf("Listener.Start() error = %v", err)
+		if err != nil && err != net.ErrClosed {
+			t.Errorf("Listener.Start() unexpected error = %v", err)
 		}
 	}()
 
@@ -94,9 +112,16 @@ func TestListenerMaxConnections(t *testing.T) {
 
 	addr := listener.tcpListener.Addr().String()
 
+	connections := make([]net.Conn, 0, maxConnections+2)
+	defer func() {
+		for _, conn := range connections {
+			conn.Close()
+		}
+	}()
+
 	// Try to establish more than maxConnections
 	for i := 0; i < maxConnections+2; i++ {
-		conn, err := net.Dial("tcp", addr)
+		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 		if err != nil {
 			if i >= maxConnections {
 				// Expected error for connections exceeding the limit
@@ -104,15 +129,31 @@ func TestListenerMaxConnections(t *testing.T) {
 			}
 			t.Errorf("Failed to establish connection %d: %v", i+1, err)
 		} else {
-			defer conn.Close()
+			connections = append(connections, conn)
 			if i >= maxConnections {
 				t.Errorf("Established connection %d when it should have been rejected", i+1)
 			}
 		}
 	}
 
+	if len(connections) != maxConnections {
+		t.Errorf("Expected %d connections, got %d", maxConnections, len(connections))
+	}
+
 	listener.Stop()
-	wg.Wait()
+
+	// Wait for the goroutine to finish with a timeout
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Test timed out")
+	}
 }
 
 func TestNewClientSession(t *testing.T) {
