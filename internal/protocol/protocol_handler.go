@@ -44,7 +44,7 @@ func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) (s
 	case "QUIT":
 		return ph.handleQuitCommand(user, command.Params)
 	case "CAP":
-		return ph.handleCapCommand(command.Params)
+		return ph.handleCapCommand(user, command.Params)
 	default:
 		return "", fmt.Errorf("unknown command: %s", command.Name)
 	}
