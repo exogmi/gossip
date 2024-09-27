@@ -21,33 +21,33 @@ func NewProtocolHandler(stateManager *state.StateManager) *ProtocolHandler {
 	}
 }
 
-func (ph *ProtocolHandler) HandleCommand(user *models.User, command *Command) ([]string, error) {
+func (ph *ProtocolHandler) HandleCommand(user *models.User, message *IRCMessage) ([]string, error) {
 	if ph == nil {
 		return nil, fmt.Errorf("ProtocolHandler is nil")
 	}
-	if command == nil {
-		return nil, fmt.Errorf("Command is nil")
+	if message == nil {
+		return nil, fmt.Errorf("IRCMessage is nil")
 	}
 
-	log.Printf("Handling command: %s", command.Name)
+	log.Printf("Handling command: %s", message.Command)
 
-	switch command.Name {
+	switch message.Command {
 	case "NICK":
-		return ph.handleNickCommand(command.Params)
+		return ph.handleNickCommand(message.Params)
 	case "USER":
-		return ph.handleUserCommand(command.Params)
+		return ph.handleUserCommand(message.Params)
 	case "JOIN":
-		return ph.handleJoinCommand(user, command.Params)
+		return ph.handleJoinCommand(user, message.Params)
 	case "PART":
-		return ph.handlePartCommand(user, command.Params)
+		return ph.handlePartCommand(user, message.Params)
 	case "PRIVMSG":
-		return ph.handlePrivmsgCommand(user, command.Params)
+		return ph.handlePrivmsgCommand(user, message.Params)
 	case "QUIT":
-		return ph.handleQuitCommand(user, command.Params)
+		return ph.handleQuitCommand(user, message.Params)
 	case "CAP":
-		return ph.handleCapCommand(user, command.Params)
+		return ph.handleCapCommand(user, message.Params)
 	default:
-		return nil, fmt.Errorf("unknown command: %s", command.Name)
+		return nil, fmt.Errorf("unknown command: %s", message.Command)
 	}
 }
 

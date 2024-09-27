@@ -130,7 +130,7 @@ func (cs *ClientSession) handleLoop() {
 		case <-cs.stopChan:
 			return
 		case msg := <-cs.incoming:
-			command, err := cs.protocolParser.Parse(msg)
+			ircMessage, err := cs.protocolParser.Parse(msg)
 			if err != nil {
 				log.Printf("Error parsing message from client %s: %v", cs.clientID, err)
 				continue
@@ -140,9 +140,9 @@ func (cs *ClientSession) handleLoop() {
 				continue
 			}
 			if cs.verbosity >= config.Debug {
-				log.Printf("Handling command for client %s: %s", cs.clientID, command.Name)
+				log.Printf("Handling command for client %s: %s", cs.clientID, ircMessage.Command)
 			}
-			responses, err := cs.protocolHandler.HandleCommand(cs.user, command)
+			responses, err := cs.protocolHandler.HandleCommand(cs.user, ircMessage)
 			if err != nil {
 				log.Printf("Error handling command for client %s: %v", cs.clientID, err)
 				continue
@@ -152,13 +152,13 @@ func (cs *ClientSession) handleLoop() {
 					cs.outgoing <- response
 				}
 			}
-			if cs.user == nil && (command.Name == "NICK" || command.Name == "USER") {
+			if cs.user == nil && (ircMessage.Command == "NICK" || ircMessage.Command == "USER") {
 				user := cs.protocolHandler.GetUser()
 				if user != nil {
 					cs.SetUser(user)
 				}
 			}
-			if command.Name == "QUIT" {
+			if ircMessage.Command == "QUIT" {
 				cs.Stop()
 				return
 			}
