@@ -312,7 +312,7 @@ func TestMessageFormattedTimestamp(t *testing.T) {
 	message := NewMessage(sender, "target", "content", PrivateMessage)
 
 	formatted := message.FormattedTimestamp()
-	parsed, err := time.Parse(time.RFC3339, formatted)
+	parsed, err := time.Parse(time.RFC3339Nano, formatted)
 	if err != nil {
 		t.Errorf("Failed to parse formatted timestamp: %v", err)
 	}

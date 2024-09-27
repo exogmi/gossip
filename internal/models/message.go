@@ -48,7 +48,7 @@ func (m *Message) IsChannelMessage() bool {
 
 // FormattedTimestamp returns a formatted string of the message timestamp
 func (m *Message) FormattedTimestamp() string {
-	return m.Timestamp.Format(time.RFC3339)
+	return m.Timestamp.Format(time.RFC3339Nano)
 }
 
 // String returns a string representation of the Message
