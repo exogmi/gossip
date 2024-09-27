@@ -57,16 +57,16 @@ class TestNicknameChange(unittest.TestCase):
         # Check if user2 received the nickname change notification
         nick_change_received = False
         for msg in self.received_messages:
-            if msg[0] == "nick" and msg[1].split("!")[0] == "user1" and msg[3][0] == new_nickname:
+            if msg[0] == "nick" and msg[1].split("!")[0] == "user1" and msg[3][0] == ":" + new_nickname:
                 nick_change_received = True
                 break
 
         self.assertTrue(nick_change_received, "User2 did not receive the nickname change notification")
 
-        # Check if user1 received its own nickname change notification (currently failing)
+        # Check if user1 received its own nickname change notification
         self_nick_change_received = False
         for msg in self.received_messages:
-            if msg[0] == "nick" and msg[1].split("!")[0] == "user1" and msg[3][0] == new_nickname and msg[2] == "user1":
+            if msg[0] == "nick" and msg[1].split("!")[0] == "user1" and msg[3][0] == ":" + new_nickname and msg[2] == "user1":
                 self_nick_change_received = True
                 break
 

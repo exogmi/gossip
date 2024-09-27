@@ -84,7 +84,7 @@ func (ph *ProtocolHandler) handleNickCommand(params []string) ([]string, error) 
 		ph.user.Nickname = newNick
 
 		// Notify all channels the user is in about the nickname change
-		nickChangeMsg := fmt.Sprintf(":%s!%s@%s NICK %s", oldNick, ph.user.Username, ph.user.Host, newNick)
+		nickChangeMsg := fmt.Sprintf(":%s!%s@%s NICK :%s", oldNick, ph.user.Username, ph.user.Host, newNick)
 		for _, channelName := range ph.user.Channels {
 			channel, err := ph.stateManager.ChannelManager.GetChannel(channelName)
 			if err != nil {
