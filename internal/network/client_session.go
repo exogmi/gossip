@@ -31,6 +31,9 @@ type ClientSession struct {
 	clientID        string
 }
 
+// Ensure ClientSession implements the models.ClientSession interface
+var _ models.ClientSession = (*ClientSession)(nil)
+
 func (cs *ClientSession) SetUser(user *models.User) {
 	cs.user = user
 	user.ClientSession = cs

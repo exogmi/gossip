@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+// ClientSession is a forward declaration to avoid circular imports
+type ClientSession interface {
+	SendMessage(message string) error
+}
+
 // User represents an IRC user
 type User struct {
 	ID            string
@@ -16,7 +21,7 @@ type User struct {
 	LastSeen      time.Time
 	Channels      []string
 	Modes         UserModes
-	ClientSession *ClientSession
+	ClientSession ClientSession
 }
 
 // UserModes represents the modes a user can have
